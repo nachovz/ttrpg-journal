@@ -59,7 +59,6 @@ test.describe.serial('Campaign journaling flow', () => {
   const userEmail = `e2e.user.${suffix}@example.com`;
   const userPassword = 'StrongPass123!';
   const noteText = `E2E note ${suffix}`;
-  const updatedNoteText = `E2E updated note ${suffix}`;
 
   let joinCode = '';
 
@@ -119,7 +118,7 @@ test.describe.serial('Campaign journaling flow', () => {
     await logout(page);
   });
 
-  test('admin can edit a journal entry grouped by campaign', async ({ page }) => {
+  test('admin can view journal entry grouped by campaign in read-only mode', async ({ page }) => {
     await login(page, adminEmail, adminPassword);
 
     await page.getByRole('button', { name: 'Campaigns' }).click();
@@ -132,16 +131,7 @@ test.describe.serial('Campaign journaling flow', () => {
 
     const noteCard = page.locator('.note', { hasText: noteText }).first();
     await expect(noteCard).toBeVisible();
-
-    await noteCard.getByRole('button', { name: 'Edit entry' }).click();
-
-    const editingCard = page.locator('.note').filter({ has: page.getByRole('button', { name: 'Save changes' }) }).first();
-    const editEditor = editingCard.locator('.editor .ql-editor').first();
-    await editEditor.click();
-    await editEditor.fill(updatedNoteText);
-
-    await editingCard.getByRole('button', { name: 'Save changes' }).click({ force: true });
-
-    await expect(page.locator('.note', { hasText: updatedNoteText }).first()).toBeVisible();
+    await expect(noteCard.getByRole('button', { name: 'Edit entry' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0);
   });
 });

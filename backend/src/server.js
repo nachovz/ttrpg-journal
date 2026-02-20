@@ -359,33 +359,6 @@ app.post('/api/notes', { preHandler: verifyAuthToken }, async (request, reply) =
   return { id: ref.id, ...note };
 });
 
-app.put('/api/notes/:id', { preHandler: verifyAuthToken }, async (request, reply) => {
-  if (request.user.role !== 'admin') {
-    return reply.code(403).send({ error: 'Only admins can edit journal entries' });
-  }
-
-  const noteId = request.params.id;
-  const contentHtml = String(request.body?.contentHtml || '').trim();
-  if (!contentHtml) {
-    return reply.code(400).send({ error: 'contentHtml is required' });
-  }
-
-  const noteRef = db.collection('notes').doc(noteId);
-  const noteDoc = await noteRef.get();
-  if (!noteDoc.exists) {
-    return reply.code(404).send({ error: 'Note not found' });
-  }
-
-  const existing = noteDoc.data() || {};
-  const update = {
-    contentHtml,
-    updatedAt: new Date().toISOString(),
-  };
-
-  await noteRef.set(update, { merge: true });
-  return { id: noteId, ...existing, ...update };
-});
-
 app.get('/api/notes', { preHandler: verifyAuthToken }, async (request) => {
   if (request.user.role === 'admin') {
     const snapshot = await db.collection('notes').orderBy('createdAt', 'desc').get();

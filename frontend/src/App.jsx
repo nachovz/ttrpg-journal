@@ -29,8 +29,6 @@ export default function App() {
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
   const [campaignForm, setCampaignForm] = useState(emptyCampaignForm);
   const [joinCodeInput, setJoinCodeInput] = useState('');
-  const [editingNoteId, setEditingNoteId] = useState('');
-  const [editNoteHtml, setEditNoteHtml] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [autoJoinAttempted, setAutoJoinAttempted] = useState(false);
@@ -191,11 +189,11 @@ export default function App() {
       window.cancelAnimationFrame(rafId);
       observers.forEach((observer) => observer.disconnect());
     };
-  }, [activeView, editingNoteId]);
+  }, [activeView]);
 
   const greeting = useMemo(() => {
     if (!me) return '';
-    return me.role === 'admin' ? 'Admin mode: campaign creation and note editing enabled' : '';
+    return me.role === 'admin' ? 'Admin mode: campaign creation enabled' : '';
   }, [me]);
 
   const notesByCampaign = useMemo(() => {
@@ -230,6 +228,33 @@ export default function App() {
     }
     return notesByCampaign.filter((group) => group.campaignId === selectedCampaignId);
   }, [me?.role, notesByCampaign, selectedCampaignId]);
+
+  const adminCampaignNotes = useMemo(() => {
+    if (me?.role !== 'admin') {
+      return [];
+    }
+    const selectedGroup = visibleNotesByCampaign[0];
+    if (!selectedGroup) {
+      return [];
+    }
+    return [...selectedGroup.notes].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  }, [me?.role, visibleNotesByCampaign]);
+
+  const adminNotesByDay = useMemo(() => {
+    const grouped = new Map();
+
+    for (const note of adminCampaignNotes) {
+      const dayKey = String(note.entryDate || '').trim() || String(note.createdAt || '').slice(0, 10) || 'Unknown';
+      if (!grouped.has(dayKey)) {
+        grouped.set(dayKey, []);
+      }
+      grouped.get(dayKey).push(note);
+    }
+
+    return Array.from(grouped.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([day, notes]) => ({ day, notes }));
+  }, [adminCampaignNotes]);
 
   const isSessionLoading = Boolean(firebaseUser) && isLoading && !me;
 
@@ -442,42 +467,6 @@ export default function App() {
     }
   }
 
-  function startEditNote(note) {
-    setEditingNoteId(note.id);
-    setEditNoteHtml(note.contentHtml || '');
-  }
-
-  function cancelEditNote() {
-    setEditingNoteId('');
-    setEditNoteHtml('');
-  }
-
-  async function handleAdminUpdateNote(noteId) {
-    if (!editNoteHtml || editNoteHtml === '<p><br></p>') {
-      setError('Note content cannot be empty');
-      return;
-    }
-
-    setError('');
-    setIsLoading(true);
-
-    try {
-      await withToken(async (token) => {
-        await apiRequest(`/api/notes/${noteId}`, token, {
-          method: 'PUT',
-          body: JSON.stringify({ contentHtml: editNoteHtml }),
-        });
-      });
-
-      cancelEditNote();
-      await refreshSession();
-    } catch (err) {
-      setError(err.message || 'Unable to update note');
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
   async function handleLogout() {
     await signOut(auth);
   }
@@ -505,6 +494,19 @@ export default function App() {
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return 'N/A';
     return parsed.toLocaleString();
+  }
+
+  function formatDayLabel(value) {
+    const parsed = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    return parsed.toLocaleDateString(undefined, {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
   }
 
   useEffect(() => {
@@ -884,67 +886,78 @@ export default function App() {
                   </section>
 
                   <section className="card">
-                    <h2>{me?.role === 'admin' ? 'Journal Entries (Selected Campaign)' : 'Campaign Journal Entries'}</h2>
-                    {visibleNotesByCampaign.length === 0 ? (
-                      <p>{me?.role === 'admin' ? 'No entries for the selected campaign.' : 'No entries yet.'}</p>
-                    ) : null}
-                    <div className="notes-group-list">
-                      {visibleNotesByCampaign.map((group) => (
-                        <section className="note-group" key={group.campaignId}>
-                          <h3>{group.campaignName}</h3>
-                          <div className="notes-grid">
-                            {group.notes.map((note) => (
-                              <article className="note" key={note.id}>
-                                <div className="meta">
-                                  {note.profileImageUrl ? (
-                                    <img className="note-avatar" alt={`${note.username || note.userEmail} avatar`} src={note.profileImageUrl} />
-                                  ) : null}
-                                  <strong>{note.username || note.userEmail}</strong>
-                                  {note.characterName ? <span>Character: {note.characterName}</span> : null}
-                                  {note.dndBeyondUrl ? (
-                                    <a href={note.dndBeyondUrl} target="_blank" rel="noreferrer">
-                                      Character sheet
-                                    </a>
-                                  ) : null}
-                                  <span>Entry date: {note.entryDate}</span>
-                                  <span>Created at: {new Date(note.createdAt).toLocaleString()}</span>
-                                  {note.updatedAt ? <span>Updated: {new Date(note.updatedAt).toLocaleString()}</span> : null}
+                    {me?.role === 'admin' ? (
+                      <>
+                        <h2>Campaign Journal Chat</h2>
+                        {visibleNotesByCampaign[0] ? <h3>{visibleNotesByCampaign[0].campaignName}</h3> : null}
+                        {adminNotesByDay.length === 0 ? <p>No entries for the selected campaign.</p> : null}
+                        <div className="chat-day-list">
+                          {adminNotesByDay.map((dayGroup) => (
+                            <section className="chat-day-group" key={dayGroup.day}>
+                              <h4 className="chat-day-heading">{formatDayLabel(dayGroup.day)}</h4>
+                              <div className="chat-thread">
+                                {dayGroup.notes.map((note) => (
+                                  <article className="note chat-message" key={note.id}>
+                                    <div className="meta chat-meta">
+                                      {note.profileImageUrl ? (
+                                        <img className="note-avatar" alt={`${note.username || note.userEmail} avatar`} src={note.profileImageUrl} />
+                                      ) : (
+                                        <div className="note-avatar note-avatar-fallback" aria-hidden="true">🧙</div>
+                                      )}
+                                      <div className="chat-author">
+                                        <strong>{note.username || note.userEmail}</strong>
+                                        <span>Character: {note.characterName || 'Not set'}</span>
+                                      </div>
+                                      <span>{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                      {note.dndBeyondUrl ? (
+                                        <a href={note.dndBeyondUrl} target="_blank" rel="noreferrer">
+                                          Character sheet
+                                        </a>
+                                      ) : null}
                                 </div>
-
-                                {editingNoteId === note.id ? (
-                                  <div className="form">
-                                    <ReactQuill
-                                      className="editor"
-                                      theme="snow"
-                                      value={editNoteHtml}
-                                      onChange={setEditNoteHtml}
-                                      placeholder={journalPlaceholder}
-                                    />
-                                    <div className="inline-form">
-                                      <button disabled={isLoading} onClick={() => handleAdminUpdateNote(note.id)} type="button">
-                                        Save changes
-                                      </button>
-                                      <button disabled={isLoading} onClick={cancelEditNote} type="button">
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <div dangerouslySetInnerHTML={{ __html: note.contentHtml }} />
-                                    {me?.role === 'admin' ? (
-                                      <button onClick={() => startEditNote(note)} type="button">
-                                        Edit entry
-                                      </button>
-                                    ) : null}
-                                  </>
-                                )}
+                                <div className="chat-bubble" dangerouslySetInnerHTML={{ __html: note.contentHtml }} />
                               </article>
                             ))}
-                          </div>
-                        </section>
-                      ))}
-                    </div>
+                              </div>
+                            </section>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <h2>Campaign Journal Entries</h2>
+                        {visibleNotesByCampaign.length === 0 ? <p>No entries yet.</p> : null}
+                        <div className="notes-group-list">
+                          {visibleNotesByCampaign.map((group) => (
+                            <section className="note-group" key={group.campaignId}>
+                              <h3>{group.campaignName}</h3>
+                              <div className="notes-grid">
+                                {group.notes.map((note) => (
+                                  <article className="note" key={note.id}>
+                                    <div className="meta">
+                                      {note.profileImageUrl ? (
+                                        <img className="note-avatar" alt={`${note.username || note.userEmail} avatar`} src={note.profileImageUrl} />
+                                      ) : null}
+                                      <strong>{note.username || note.userEmail}</strong>
+                                      {note.characterName ? <span>Character: {note.characterName}</span> : null}
+                                      {note.dndBeyondUrl ? (
+                                        <a href={note.dndBeyondUrl} target="_blank" rel="noreferrer">
+                                          Character sheet
+                                        </a>
+                                      ) : null}
+                                      <span>Entry date: {note.entryDate}</span>
+                                      <span>Created at: {new Date(note.createdAt).toLocaleString()}</span>
+                                      {note.updatedAt ? <span>Updated: {new Date(note.updatedAt).toLocaleString()}</span> : null}
+                                    </div>
+                                    <div dangerouslySetInnerHTML={{ __html: note.contentHtml }} />
+                                  </article>
+                                ))}
+                              </div>
+                            </section>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </section>
                 </>
               )}

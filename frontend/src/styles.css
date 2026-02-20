@@ -141,6 +141,26 @@
     @apply grid gap-5;
   }
 
+  .chat-day-list {
+    @apply grid gap-5;
+  }
+
+  .chat-day-group {
+    @apply grid gap-3;
+  }
+
+  .chat-day-heading {
+    @apply m-0 text-sm font-semibold uppercase tracking-wide text-stone-600;
+  }
+
+  .dark .chat-day-heading {
+    @apply text-zinc-400;
+  }
+
+  .chat-thread {
+    @apply grid gap-3;
+  }
+
   .note-group h3 {
     @apply mb-2 text-lg font-semibold text-red-800;
   }
@@ -167,6 +187,38 @@
 
   .note-avatar {
     @apply h-7 w-7 rounded-full border border-amber-700/40 object-cover;
+  }
+
+  .note-avatar-fallback {
+    @apply grid place-items-center bg-red-100 text-base;
+  }
+
+  .dark .note-avatar-fallback {
+    @apply bg-zinc-800;
+  }
+
+  .chat-author {
+    @apply grid gap-0;
+  }
+
+  .chat-author span {
+    @apply text-xs text-stone-600;
+  }
+
+  .dark .chat-author span {
+    @apply text-zinc-400;
+  }
+
+  .chat-message {
+    @apply max-w-4xl;
+  }
+
+  .chat-bubble {
+    @apply rounded-lg border border-amber-700/30 bg-amber-50 p-3;
+  }
+
+  .dark .chat-bubble {
+    @apply border-amber-400/30 bg-zinc-800;
   }
 
   .hint {
