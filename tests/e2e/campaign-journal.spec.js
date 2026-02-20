@@ -98,8 +98,11 @@ test.describe.serial('Campaign journaling flow', () => {
 
     await expect(page.locator('.campaign-item', { hasText: campaignName }).first()).toBeVisible();
 
-    await page.getByRole('button', { name: 'Journal' }).click();
-    await page.getByLabel('Campaign').selectOption({ label: campaignName });
+    await page
+      .locator('.campaign-item', { hasText: campaignName })
+      .first()
+      .getByRole('button', { name: 'Load campaign journal' })
+      .click();
 
     const editor = page.locator('.editor .ql-editor').first();
     await editor.click();
@@ -119,8 +122,12 @@ test.describe.serial('Campaign journaling flow', () => {
   test('admin can edit a journal entry grouped by campaign', async ({ page }) => {
     await login(page, adminEmail, adminPassword);
 
-    await page.getByRole('button', { name: 'Journal' }).click();
-    await page.getByLabel('Campaign').selectOption({ label: campaignName });
+    await page.getByRole('button', { name: 'Campaigns' }).click();
+    await page
+      .locator('.campaign-item', { hasText: campaignName })
+      .first()
+      .getByRole('button', { name: 'Load campaign journal' })
+      .click();
     await expect(page.getByRole('heading', { name: campaignName, level: 3 })).toBeVisible();
 
     const noteCard = page.locator('.note', { hasText: noteText }).first();

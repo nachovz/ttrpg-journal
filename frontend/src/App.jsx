@@ -5,7 +5,7 @@ import {
   signOut,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useMatch, useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill';
 import { auth } from './firebase';
 import { apiRequest } from './api';
@@ -41,12 +41,18 @@ export default function App() {
   });
   const location = useLocation();
   const navigate = useNavigate();
+  const journalMatch = useMatch('/journal/:campaignId');
+  const routeCampaignId = (journalMatch?.params?.campaignId || '').trim();
 
   const activeView = useMemo(() => {
     if (location.pathname === '/campaigns') return 'campaigns';
     if (location.pathname === '/profile') return 'profile';
     return 'journal';
   }, [location.pathname]);
+
+  const isJournalRoute = location.pathname.startsWith('/journal');
+  const isRouteCampaignValid = Boolean(routeCampaignId) && campaigns.some((campaign) => campaign.id === routeCampaignId);
+  const showInvalidCampaignPage = isJournalRoute && Boolean(routeCampaignId) && Boolean(me) && !isLoading && !isRouteCampaignValid;
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme');
@@ -105,10 +111,14 @@ export default function App() {
     if (!firebaseUser) {
       return;
     }
-    if (!['/journal', '/campaigns', '/profile'].includes(location.pathname)) {
+    if (!(location.pathname.startsWith('/journal') || ['/campaigns', '/profile'].includes(location.pathname))) {
       navigate('/journal', { replace: true });
     }
   }, [firebaseUser, location.pathname, navigate]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!firebaseUser || !autoJoinCode || autoJoinAttempted) {
@@ -252,6 +262,9 @@ export default function App() {
         setCampaigns(campaignsData);
         setNotes(notesData);
         setSelectedCampaignId((previous) => {
+          if (routeCampaignId && campaignsData.some((campaign) => campaign.id === routeCampaignId)) {
+            return routeCampaignId;
+          }
           if (previous && campaignsData.some((campaign) => campaign.id === previous)) {
             return previous;
           }
@@ -471,8 +484,12 @@ export default function App() {
 
   function goToView(view) {
     const path = view === 'campaigns' ? '/campaigns' : view === 'profile' ? '/profile' : '/journal';
-    if (location.pathname !== path) {
-      navigate(path);
+    const pathWithCampaign =
+      view === 'journal' && selectedCampaignId
+        ? `${path}/${encodeURIComponent(selectedCampaignId)}`
+        : path;
+    if (location.pathname !== pathWithCampaign) {
+      navigate(pathWithCampaign);
     }
   }
 
@@ -489,6 +506,37 @@ export default function App() {
     if (Number.isNaN(parsed.getTime())) return 'N/A';
     return parsed.toLocaleString();
   }
+
+  useEffect(() => {
+    if (!campaigns.length || !routeCampaignId) {
+      return;
+    }
+    if (!campaigns.some((campaign) => campaign.id === routeCampaignId)) {
+      return;
+    }
+    if (routeCampaignId !== selectedCampaignId) {
+      setSelectedCampaignId(routeCampaignId);
+    }
+  }, [campaigns, routeCampaignId, selectedCampaignId]);
+
+  useEffect(() => {
+    if (!location.pathname.startsWith('/journal')) {
+      return;
+    }
+    if (showInvalidCampaignPage) {
+      return;
+    }
+    if (routeCampaignId && routeCampaignId !== selectedCampaignId) {
+      return;
+    }
+    if (!selectedCampaignId && routeCampaignId && campaigns.length > 0) {
+      return;
+    }
+    const expectedPath = selectedCampaignId ? `/journal/${encodeURIComponent(selectedCampaignId)}` : '/journal';
+    if (location.pathname !== expectedPath) {
+      navigate(expectedPath, { replace: true });
+    }
+  }, [campaigns.length, location.pathname, navigate, routeCampaignId, selectedCampaignId, showInvalidCampaignPage]);
 
   if (isAuthInitializing) {
     return (
@@ -576,7 +624,6 @@ export default function App() {
           </div>
           <div className="header-actions">
             <div className="skeleton skeleton-tabs" aria-hidden="true" />
-            <div className="skeleton skeleton-select" aria-hidden="true" />
           </div>
         </section>
 
@@ -650,22 +697,6 @@ export default function App() {
               <span aria-hidden="true">{theme === 'dark' ? '☀️' : '🌙'}</span>
             </button>
           </div>
-
-          <label className="header-campaign">
-            Campaign
-            <select
-              value={selectedCampaignId}
-              onChange={(event) => setSelectedCampaignId(event.target.value)}
-              required
-            >
-              {campaigns.length === 0 ? <option value="">No campaigns available</option> : null}
-              {campaigns.map((campaign) => (
-                <option key={campaign.id} value={campaign.id}>
-                  {campaign.name}
-                </option>
-              ))}
-            </select>
-          </label>
 
         </div>
       </section>
@@ -787,6 +818,13 @@ export default function App() {
                         <span className="hint">Created: {formatDateTime(campaign.createdAt)}</span>
                       ) : null}
                       <span className="hint">Last updated: {formatDateTime(campaign.updatedAt || campaign.createdAt)}</span>
+                      <button
+                        disabled={isLoading}
+                        onClick={() => navigate(`/journal/${encodeURIComponent(campaign.id)}`)}
+                        type="button"
+                      >
+                        Load campaign journal
+                      </button>
                       {me?.role === 'admin' ? (
                         <button
                           className="button-danger"
@@ -806,88 +844,110 @@ export default function App() {
         />
 
         <Route
-          path="/journal"
+          path="/journal/*"
           element={(
             <>
-              <section className="card">
-                <h2>New Entry</h2>
-                <form onSubmit={handleCreateNote} className="form">
-                  <ReactQuill
-                    className="editor"
-                    theme="snow"
-                    value={editorHtml}
-                    onChange={setEditorHtml}
-                    placeholder={journalPlaceholder}
-                  />
-                  <button disabled={isLoading || !selectedCampaignId} type="submit">
-                    Save note
-                  </button>
-                </form>
-              </section>
+              {showInvalidCampaignPage ? (
+                <section className="card">
+                  <h2>Campaign Not Found</h2>
+                  <p className="error">
+                    The campaign ID in this URL is invalid or you do not have access to it.
+                  </p>
+                  <div className="inline-form">
+                    <button onClick={() => navigate('/campaigns')} type="button">
+                      Go to campaigns
+                    </button>
+                    <button
+                      onClick={() => navigate(selectedCampaignId ? `/journal/${encodeURIComponent(selectedCampaignId)}` : '/journal')}
+                      type="button"
+                    >
+                      Open my journal
+                    </button>
+                  </div>
+                </section>
+              ) : (
+                <>
+                  <section className="card">
+                    <h2>New Entry</h2>
+                    <form onSubmit={handleCreateNote} className="form">
+                      <ReactQuill
+                        className="editor"
+                        theme="snow"
+                        value={editorHtml}
+                        onChange={setEditorHtml}
+                        placeholder={journalPlaceholder}
+                      />
+                      <button disabled={isLoading || !selectedCampaignId} type="submit">
+                        Save note
+                      </button>
+                    </form>
+                  </section>
 
-              <section className="card">
-                <h2>{me?.role === 'admin' ? 'Journal Entries (Selected Campaign)' : 'Campaign Journal Entries'}</h2>
-                {visibleNotesByCampaign.length === 0 ? (
-                  <p>{me?.role === 'admin' ? 'No entries for the selected campaign.' : 'No entries yet.'}</p>
-                ) : null}
-                <div className="notes-group-list">
-                  {visibleNotesByCampaign.map((group) => (
-                    <section className="note-group" key={group.campaignId}>
-                      <h3>{group.campaignName}</h3>
-                      <div className="notes-grid">
-                        {group.notes.map((note) => (
-                          <article className="note" key={note.id}>
-                            <div className="meta">
-                              {note.profileImageUrl ? (
-                                <img className="note-avatar" alt={`${note.username || note.userEmail} avatar`} src={note.profileImageUrl} />
-                              ) : null}
-                              <strong>{note.username || note.userEmail}</strong>
-                              {note.characterName ? <span>Character: {note.characterName}</span> : null}
-                              {note.dndBeyondUrl ? (
-                                <a href={note.dndBeyondUrl} target="_blank" rel="noreferrer">
-                                  Character sheet
-                                </a>
-                              ) : null}
-                              <span>Entry date: {note.entryDate}</span>
-                              <span>Created at: {new Date(note.createdAt).toLocaleString()}</span>
-                              {note.updatedAt ? <span>Updated: {new Date(note.updatedAt).toLocaleString()}</span> : null}
-                            </div>
-
-                            {editingNoteId === note.id ? (
-                              <div className="form">
-                                <ReactQuill
-                                  className="editor"
-                                  theme="snow"
-                                  value={editNoteHtml}
-                                  onChange={setEditNoteHtml}
-                                  placeholder={journalPlaceholder}
-                                />
-                                <div className="inline-form">
-                                  <button disabled={isLoading} onClick={() => handleAdminUpdateNote(note.id)} type="button">
-                                    Save changes
-                                  </button>
-                                  <button disabled={isLoading} onClick={cancelEditNote} type="button">
-                                    Cancel
-                                  </button>
+                  <section className="card">
+                    <h2>{me?.role === 'admin' ? 'Journal Entries (Selected Campaign)' : 'Campaign Journal Entries'}</h2>
+                    {visibleNotesByCampaign.length === 0 ? (
+                      <p>{me?.role === 'admin' ? 'No entries for the selected campaign.' : 'No entries yet.'}</p>
+                    ) : null}
+                    <div className="notes-group-list">
+                      {visibleNotesByCampaign.map((group) => (
+                        <section className="note-group" key={group.campaignId}>
+                          <h3>{group.campaignName}</h3>
+                          <div className="notes-grid">
+                            {group.notes.map((note) => (
+                              <article className="note" key={note.id}>
+                                <div className="meta">
+                                  {note.profileImageUrl ? (
+                                    <img className="note-avatar" alt={`${note.username || note.userEmail} avatar`} src={note.profileImageUrl} />
+                                  ) : null}
+                                  <strong>{note.username || note.userEmail}</strong>
+                                  {note.characterName ? <span>Character: {note.characterName}</span> : null}
+                                  {note.dndBeyondUrl ? (
+                                    <a href={note.dndBeyondUrl} target="_blank" rel="noreferrer">
+                                      Character sheet
+                                    </a>
+                                  ) : null}
+                                  <span>Entry date: {note.entryDate}</span>
+                                  <span>Created at: {new Date(note.createdAt).toLocaleString()}</span>
+                                  {note.updatedAt ? <span>Updated: {new Date(note.updatedAt).toLocaleString()}</span> : null}
                                 </div>
-                              </div>
-                            ) : (
-                              <>
-                                <div dangerouslySetInnerHTML={{ __html: note.contentHtml }} />
-                                {me?.role === 'admin' ? (
-                                  <button onClick={() => startEditNote(note)} type="button">
-                                    Edit entry
-                                  </button>
-                                ) : null}
-                              </>
-                            )}
-                          </article>
-                        ))}
-                      </div>
-                    </section>
-                  ))}
-                </div>
-              </section>
+
+                                {editingNoteId === note.id ? (
+                                  <div className="form">
+                                    <ReactQuill
+                                      className="editor"
+                                      theme="snow"
+                                      value={editNoteHtml}
+                                      onChange={setEditNoteHtml}
+                                      placeholder={journalPlaceholder}
+                                    />
+                                    <div className="inline-form">
+                                      <button disabled={isLoading} onClick={() => handleAdminUpdateNote(note.id)} type="button">
+                                        Save changes
+                                      </button>
+                                      <button disabled={isLoading} onClick={cancelEditNote} type="button">
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div dangerouslySetInnerHTML={{ __html: note.contentHtml }} />
+                                    {me?.role === 'admin' ? (
+                                      <button onClick={() => startEditNote(note)} type="button">
+                                        Edit entry
+                                      </button>
+                                    ) : null}
+                                  </>
+                                )}
+                              </article>
+                            ))}
+                          </div>
+                        </section>
+                      ))}
+                    </div>
+                  </section>
+                </>
+              )}
             </>
           )}
         />

@@ -97,14 +97,6 @@
     }
   }
 
-  .header-campaign {
-    @apply grid w-full gap-1 text-xs font-semibold uppercase tracking-wide text-stone-700 md:w-72;
-  }
-
-  .dark .header-campaign {
-    @apply text-zinc-300;
-  }
-
   .auth-card {
     @apply mx-auto mt-10 max-w-xl;
   }
@@ -251,10 +243,6 @@
 
   .skeleton-tabs {
     @apply h-10 w-80;
-  }
-
-  .skeleton-select {
-    @apply h-10 w-72;
   }
 
   .skeleton-heading {
