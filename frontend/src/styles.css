@@ -149,6 +149,10 @@
     @apply grid gap-3;
   }
 
+  .chat-day-header {
+    @apply flex flex-wrap items-center justify-between gap-2;
+  }
+
   .chat-day-heading {
     @apply m-0 text-sm font-semibold uppercase tracking-wide text-stone-600;
   }

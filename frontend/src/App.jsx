@@ -23,6 +23,7 @@ export default function App() {
   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
   const [me, setMe] = useState(null);
   const [notes, setNotes] = useState([]);
+  const [journalDayLabels, setJournalDayLabels] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
   const [editorHtml, setEditorHtml] = useState('');
@@ -96,6 +97,7 @@ export default function App() {
     if (!firebaseUser) {
       setMe(null);
       setNotes([]);
+      setJournalDayLabels([]);
       setCampaigns([]);
       setSelectedCampaignId('');
       setAutoJoinAttempted(false);
@@ -256,6 +258,15 @@ export default function App() {
       .map(([day, notes]) => ({ day, notes }));
   }, [adminCampaignNotes]);
 
+  const journalDayLabelByKey = useMemo(() => {
+    const map = new Map();
+    for (const item of journalDayLabels) {
+      const key = `${item.campaignId}:${item.entryDate}`;
+      map.set(key, item.title || '');
+    }
+    return map;
+  }, [journalDayLabels]);
+
   const isSessionLoading = Boolean(firebaseUser) && isLoading && !me;
 
   async function withToken(fn) {
@@ -270,10 +281,11 @@ export default function App() {
 
     try {
       await withToken(async (token) => {
-        const [meData, campaignsData, notesData] = await Promise.all([
+        const [meData, campaignsData, notesData, labelsData] = await Promise.all([
           apiRequest('/api/me', token),
           apiRequest('/api/campaigns', token),
           apiRequest('/api/notes', token),
+          apiRequest('/api/journal-day-labels', token),
         ]);
 
         setMe(meData);
@@ -286,6 +298,7 @@ export default function App() {
 
         setCampaigns(campaignsData);
         setNotes(notesData);
+        setJournalDayLabels(labelsData);
         setSelectedCampaignId((previous) => {
           if (routeCampaignId && campaignsData.some((campaign) => campaign.id === routeCampaignId)) {
             return routeCampaignId;
@@ -469,6 +482,41 @@ export default function App() {
 
   async function handleLogout() {
     await signOut(auth);
+  }
+
+  async function handleSetDayGroupTitle(day) {
+    if (me?.role !== 'admin' || !selectedCampaignId) {
+      return;
+    }
+
+    const currentTitle = journalDayLabelByKey.get(`${selectedCampaignId}:${day}`) || '';
+    const nextTitle = window.prompt(
+      'Set a title for this journal day group (leave empty to clear):',
+      currentTitle
+    );
+    if (nextTitle === null) {
+      return;
+    }
+
+    setError('');
+    setIsLoading(true);
+    try {
+      await withToken(async (token) => {
+        await apiRequest(
+          `/api/journal-day-labels/${encodeURIComponent(selectedCampaignId)}/${encodeURIComponent(day)}`,
+          token,
+          {
+            method: 'PUT',
+            body: JSON.stringify({ title: nextTitle.trim() }),
+          }
+        );
+      });
+      await refreshSession();
+    } catch (err) {
+      setError(err.message || 'Unable to update day title');
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function goToView(view) {
@@ -894,7 +942,18 @@ export default function App() {
                         <div className="chat-day-list">
                           {adminNotesByDay.map((dayGroup) => (
                             <section className="chat-day-group" key={dayGroup.day}>
-                              <h4 className="chat-day-heading">{formatDayLabel(dayGroup.day)}</h4>
+                              <div className="chat-day-header">
+                                <h4 className="chat-day-heading">
+                                  {journalDayLabelByKey.get(`${selectedCampaignId}:${dayGroup.day}`) || formatDayLabel(dayGroup.day)}
+                                </h4>
+                                <button
+                                  disabled={isLoading}
+                                  onClick={() => handleSetDayGroupTitle(dayGroup.day)}
+                                  type="button"
+                                >
+                                  Name this day
+                                </button>
+                              </div>
                               <div className="chat-thread">
                                 {dayGroup.notes.map((note) => (
                                   <article className="note chat-message" key={note.id}>

@@ -129,6 +129,23 @@ async function deleteNotesByCampaignId(campaignId) {
   return deletedCount;
 }
 
+async function deleteJournalDayLabelsByCampaignId(campaignId) {
+  const labelsCollection = db.collection('journalDayLabels');
+
+  while (true) {
+    const snapshot = await labelsCollection.where('campaignId', '==', campaignId).limit(400).get();
+    if (snapshot.empty) {
+      break;
+    }
+
+    const batch = db.batch();
+    snapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
+  }
+}
+
 function ensureCampaignMember(campaign, uid) {
   const memberIds = Array.isArray(campaign.memberIds) ? campaign.memberIds : [];
   return memberIds.includes(uid);
@@ -313,9 +330,76 @@ app.delete('/api/campaigns/:id', { preHandler: verifyAuthToken }, async (request
   }
 
   const deletedNotes = await deleteNotesByCampaignId(campaignId);
+  await deleteJournalDayLabelsByCampaignId(campaignId);
   await campaignRef.delete();
 
   return { success: true, campaignId, deletedNotes };
+});
+
+app.get('/api/journal-day-labels', { preHandler: verifyAuthToken }, async (request) => {
+  const campaignsSnapshot = await db
+    .collection('campaigns')
+    .where('memberIds', 'array-contains', request.user.uid)
+    .get();
+  const campaignIds = campaignsSnapshot.docs.map((doc) => doc.id);
+  if (campaignIds.length === 0) {
+    return [];
+  }
+
+  const labelSnapshots = await Promise.all(
+    campaignIds.map((campaignId) => db.collection('journalDayLabels').where('campaignId', '==', campaignId).get())
+  );
+
+  return labelSnapshots
+    .flatMap((snapshot) => snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })))
+    .sort((a, b) => String(a.entryDate).localeCompare(String(b.entryDate)));
+});
+
+app.put('/api/journal-day-labels/:campaignId/:entryDate', { preHandler: verifyAuthToken }, async (request, reply) => {
+  if (request.user.role !== 'admin') {
+    return reply.code(403).send({ error: 'Only admins can name journal day groups' });
+  }
+
+  const campaignId = String(request.params?.campaignId || '').trim();
+  const entryDate = String(request.params?.entryDate || '').trim();
+  const title = String(request.body?.title || '').trim();
+  const normalizedEntryDate = /^\d{4}-\d{2}-\d{2}$/.test(entryDate) ? entryDate : '';
+
+  if (!campaignId) {
+    return reply.code(400).send({ error: 'campaignId is required' });
+  }
+  if (!normalizedEntryDate) {
+    return reply.code(400).send({ error: 'entryDate must be in YYYY-MM-DD format' });
+  }
+  if (title.length > 120) {
+    return reply.code(400).send({ error: 'title must be 120 characters or less' });
+  }
+
+  const campaign = await getCampaignById(campaignId);
+  if (!campaign) {
+    return reply.code(404).send({ error: 'Campaign not found' });
+  }
+  if (!ensureCampaignMember(campaign, request.user.uid)) {
+    return reply.code(403).send({ error: 'You are not a member of this campaign' });
+  }
+
+  const docId = `${campaignId}_${normalizedEntryDate}`;
+  const labelRef = db.collection('journalDayLabels').doc(docId);
+
+  if (!title) {
+    await labelRef.delete();
+    return { id: docId, campaignId, entryDate: normalizedEntryDate, title: '' };
+  }
+
+  const payload = {
+    campaignId,
+    entryDate: normalizedEntryDate,
+    title,
+    updatedAt: new Date().toISOString(),
+    updatedBy: request.user.uid,
+  };
+  await labelRef.set(payload, { merge: true });
+  return { id: docId, ...payload };
 });
 
 app.post('/api/notes', { preHandler: verifyAuthToken }, async (request, reply) => {
