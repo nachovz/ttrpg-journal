@@ -10,13 +10,14 @@ import { auth } from './firebase';
 import { apiRequest } from './api';
 
 const emptyAuthForm = { email: '', password: '' };
-const emptyProfileForm = { username: '', characterName: '', dndBeyondUrl: '' };
+const emptyProfileForm = { username: '', characterName: '', dndBeyondUrl: '', profileImageUrl: '' };
 const emptyCampaignForm = { name: '' };
 
 export default function App() {
   const [authMode, setAuthMode] = useState('login');
   const [authForm, setAuthForm] = useState(emptyAuthForm);
   const [firebaseUser, setFirebaseUser] = useState(null);
+  const [isAuthInitializing, setIsAuthInitializing] = useState(true);
   const [me, setMe] = useState(null);
   const [notes, setNotes] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
@@ -37,7 +38,10 @@ export default function App() {
   });
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => setFirebaseUser(user));
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
+      setIsAuthInitializing(false);
+    });
     return () => unsub();
   }, []);
 
@@ -95,6 +99,16 @@ export default function App() {
       .sort((a, b) => a.campaignName.localeCompare(b.campaignName));
   }, [notes, campaigns]);
 
+  const visibleNotesByCampaign = useMemo(() => {
+    if (me?.role !== 'admin') {
+      return notesByCampaign;
+    }
+    if (!selectedCampaignId) {
+      return [];
+    }
+    return notesByCampaign.filter((group) => group.campaignId === selectedCampaignId);
+  }, [me?.role, notesByCampaign, selectedCampaignId]);
+
   async function withToken(fn) {
     if (!firebaseUser) throw new Error('Not authenticated');
     const token = await firebaseUser.getIdToken(true);
@@ -118,6 +132,7 @@ export default function App() {
           username: meData.username || '',
           characterName: meData.characterName || '',
           dndBeyondUrl: meData.dndBeyondUrl || '',
+          profileImageUrl: meData.profileImageUrl || '',
         });
 
         setCampaigns(campaignsData);
@@ -310,11 +325,22 @@ export default function App() {
     await signOut(auth);
   }
 
+  if (isAuthInitializing) {
+    return (
+      <main className="container">
+        <section className="card auth-card">
+          <h1>Bard's Journal</h1>
+          <p>Loading session...</p>
+        </section>
+      </main>
+    );
+  }
+
   if (!firebaseUser) {
     return (
       <main className="container">
         <section className="card auth-card">
-          <h1>Unified Journal</h1>
+          <h1>Bard's Journal</h1>
           <p>Personal journals with role-based access and admin overview.</p>
 
           <div className="tabs">
@@ -374,8 +400,11 @@ export default function App() {
   return (
     <main className="container">
       <section className="card header-card">
+        <div className="header-avatar">
+          {me?.profileImageUrl ? <img alt={`${me?.username || 'User'} avatar`} src={me.profileImageUrl} /> : '🧙'}
+        </div>
         <div className="header-info">
-          <h1>Unified Journal</h1>
+          <h1>Bard's Journal</h1>
           <p>{me?.username || me?.email}</p>
           <p className="hint">{me?.email}</p>
           <p className="hint">Role: {me?.role || 'user'}</p>
@@ -406,6 +435,22 @@ export default function App() {
               Profile
             </button>
           </div>
+
+          <label className="header-campaign">
+            Campaign
+            <select
+              value={selectedCampaignId}
+              onChange={(event) => setSelectedCampaignId(event.target.value)}
+              required
+            >
+              {campaigns.length === 0 ? <option value="">No campaigns available</option> : null}
+              {campaigns.map((campaign) => (
+                <option key={campaign.id} value={campaign.id}>
+                  {campaign.name}
+                </option>
+              ))}
+            </select>
+          </label>
 
           <button onClick={handleLogout} type="button">
             Logout
@@ -451,6 +496,18 @@ export default function App() {
                   setProfileForm((prev) => ({ ...prev, dndBeyondUrl: event.target.value }))
                 }
                 placeholder="https://www.dndbeyond.com/characters/..."
+              />
+            </label>
+
+            <label>
+              Profile Image URL
+              <input
+                type="url"
+                value={profileForm.profileImageUrl}
+                onChange={(event) =>
+                  setProfileForm((prev) => ({ ...prev, profileImageUrl: event.target.value }))
+                }
+                placeholder="https://example.com/avatar.png"
               />
             </label>
 
@@ -520,22 +577,6 @@ export default function App() {
           <section className="card">
             <h2>New Entry</h2>
             <form onSubmit={handleCreateNote} className="form">
-              <label>
-                Campaign
-                <select
-                  value={selectedCampaignId}
-                  onChange={(event) => setSelectedCampaignId(event.target.value)}
-                  required
-                >
-                  {campaigns.length === 0 ? <option value="">No campaigns available</option> : null}
-                  {campaigns.map((campaign) => (
-                    <option key={campaign.id} value={campaign.id}>
-                      {campaign.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
               <ReactQuill className="editor" theme="snow" value={editorHtml} onChange={setEditorHtml} />
               <button disabled={isLoading || !selectedCampaignId} type="submit">
                 Save note
@@ -544,16 +585,21 @@ export default function App() {
           </section>
 
           <section className="card">
-            <h2>{me?.role === 'admin' ? 'All Journal Entries (by Campaign)' : 'Campaign Journal Entries'}</h2>
-            {notes.length === 0 ? <p>No entries yet.</p> : null}
+            <h2>{me?.role === 'admin' ? 'Journal Entries (Selected Campaign)' : 'Campaign Journal Entries'}</h2>
+            {visibleNotesByCampaign.length === 0 ? (
+              <p>{me?.role === 'admin' ? 'No entries for the selected campaign.' : 'No entries yet.'}</p>
+            ) : null}
             <div className="notes-group-list">
-              {notesByCampaign.map((group) => (
+              {visibleNotesByCampaign.map((group) => (
                 <section className="note-group" key={group.campaignId}>
                   <h3>{group.campaignName}</h3>
                   <div className="notes-grid">
                     {group.notes.map((note) => (
                       <article className="note" key={note.id}>
                         <div className="meta">
+                          {note.profileImageUrl ? (
+                            <img className="note-avatar" alt={`${note.username || note.userEmail} avatar`} src={note.profileImageUrl} />
+                          ) : null}
                           <strong>{note.username || note.userEmail}</strong>
                           {note.characterName ? <span>Character: {note.characterName}</span> : null}
                           {note.dndBeyondUrl ? (

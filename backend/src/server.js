@@ -23,6 +23,7 @@ function normalizeProfileInput(body = {}) {
   const username = String(body.username || '').trim();
   const characterName = String(body.characterName || '').trim();
   const dndBeyondUrl = String(body.dndBeyondUrl || '').trim();
+  const profileImageUrl = String(body.profileImageUrl || '').trim();
 
   if (!username) {
     throw new Error('username is required');
@@ -43,8 +44,18 @@ function normalizeProfileInput(body = {}) {
       throw new Error('dndBeyondUrl must be a valid URL');
     }
   }
+  if (profileImageUrl) {
+    try {
+      const parsed = new URL(profileImageUrl);
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new Error('profileImageUrl must be a valid http/https URL');
+      }
+    } catch {
+      throw new Error('profileImageUrl must be a valid URL');
+    }
+  }
 
-  return { username, characterName, dndBeyondUrl };
+  return { username, characterName, dndBeyondUrl, profileImageUrl };
 }
 
 function normalizeCampaignInput(body = {}) {
@@ -158,6 +169,7 @@ app.get('/api/me', { preHandler: verifyAuthToken }, async (request) => {
     username: userData.username || '',
     characterName: userData.characterName || '',
     dndBeyondUrl: userData.dndBeyondUrl || '',
+    profileImageUrl: userData.profileImageUrl || '',
   };
 
   await userRef.set(
@@ -167,6 +179,7 @@ app.get('/api/me', { preHandler: verifyAuthToken }, async (request) => {
       username: me.username,
       characterName: me.characterName,
       dndBeyondUrl: me.dndBeyondUrl,
+      profileImageUrl: me.profileImageUrl,
       updatedAt: new Date().toISOString(),
     },
     { merge: true }
@@ -286,6 +299,7 @@ app.post('/api/notes', { preHandler: verifyAuthToken }, async (request, reply) =
     username: userData.username || '',
     characterName: userData.characterName || '',
     dndBeyondUrl: userData.dndBeyondUrl || '',
+    profileImageUrl: userData.profileImageUrl || '',
     campaignId: campaign.id,
     campaignName: campaign.name,
     contentHtml,

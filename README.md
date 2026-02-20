@@ -1,4 +1,4 @@
-# Unified Journal App (React + Fastify + Firebase)
+# Bard's Journal App (React + Fastify + Firebase)
 
 A multi-user journaling app with:
 - Email/password account management
@@ -53,8 +53,8 @@ npx playwright install
 Set admin credentials (must match an admin email in `backend/.env`):
 
 ```bash
-export E2E_ADMIN_EMAIL=\"your-admin-email@example.com\"
-export E2E_ADMIN_PASSWORD=\"your-admin-password\"
+export E2E_ADMIN_EMAIL="your-admin-email@example.com"
+export E2E_ADMIN_PASSWORD="your-admin-password"
 ```
 
 Run tests:

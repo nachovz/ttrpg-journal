@@ -37,7 +37,7 @@ async function login(page, email, password) {
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.locator('form').getByRole('button', { name: 'Login' }).click();
-  await expect(page.getByRole('heading', { name: 'Unified Journal' }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: "Bard's Journal" }).first()).toBeVisible();
   await expect(page.getByText('Failed to fetch')).not.toBeVisible();
   await expect(page.getByText(email).first()).toBeVisible();
 }
@@ -117,6 +117,7 @@ test.describe.serial('Campaign journaling flow', () => {
     await login(page, adminEmail, adminPassword);
 
     await page.getByRole('button', { name: 'Journal' }).click();
+    await page.getByLabel('Campaign').selectOption({ label: campaignName });
     await expect(page.getByRole('heading', { name: campaignName, level: 3 })).toBeVisible();
 
     const noteCard = page.locator('.note', { hasText: noteText }).first();
