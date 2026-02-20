@@ -1,3 +1,1 @@
-export interface CampaignsViewProps {
-  onLoadCampaignJournal: (campaignId: string) => void;
-}
+export interface CampaignsViewProps {}

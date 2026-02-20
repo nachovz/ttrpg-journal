@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useSession } from '../../context/SessionContext/SessionContext';
 import type { CampaignsViewProps } from './types';
 
@@ -8,7 +9,8 @@ function formatDateTime(value?: string) {
   return parsed.toLocaleString();
 }
 
-export function CampaignsView({ onLoadCampaignJournal }: CampaignsViewProps) {
+export function CampaignsView({}: CampaignsViewProps) {
+  const navigate = useNavigate();
   const {
     campaigns,
     campaignNameInput,
@@ -71,7 +73,7 @@ export function CampaignsView({ onLoadCampaignJournal }: CampaignsViewProps) {
               </a>
               {me?.role === 'admin' ? <span className="hint">Created: {formatDateTime(campaign.createdAt)}</span> : null}
               <span className="hint">Last updated: {formatDateTime(campaign.updatedAt || campaign.createdAt)}</span>
-              <button disabled={isLoading} onClick={() => onLoadCampaignJournal(campaign.id)} type="button">
+              <button disabled={isLoading} onClick={() => navigate(`/journal/${encodeURIComponent(campaign.id)}`)} type="button">
                 Load campaign journal
               </button>
               {me?.role === 'admin' ? (

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import ReactQuill from 'react-quill';
+import { useMatch, useNavigate } from 'react-router-dom';
 import { AdminJournalChat } from '../AdminJournalChat/AdminJournalChat';
 import { UserJournalList } from '../UserJournalList/UserJournalList';
 import { useSession } from '../../context/SessionContext/SessionContext';
@@ -13,7 +14,8 @@ function getNoteDay(note: Note) {
   return String(note.entryDate || '').trim() || String(note.createdAt || '').slice(0, 10) || 'Unknown';
 }
 
-export function JournalView({ currentCampaignId, onGoToCampaigns, onGoToJournal }: JournalViewProps) {
+export function JournalView({}: JournalViewProps) {
+  const navigate = useNavigate();
   const {
     createNote,
     fetchCampaignById,
@@ -24,6 +26,8 @@ export function JournalView({ currentCampaignId, onGoToCampaigns, onGoToJournal 
     setError,
     setDayGroupTitle,
   } = useSession();
+  const journalMatch = useMatch('/journal/:campaignId');
+  const currentCampaignId = (journalMatch?.params?.campaignId || '').trim();
 
   const [editorHtml, setEditorHtml] = useState('');
   const [adminEntryVisibility, setAdminEntryVisibility] = useState<'public' | 'private'>('private');
@@ -127,7 +131,7 @@ export function JournalView({ currentCampaignId, onGoToCampaigns, onGoToJournal 
       <section className="card">
         <h2>Select a Campaign</h2>
         <p className="hint">Load a campaign from the Campaigns view to open its journal permalink.</p>
-        <button onClick={onGoToCampaigns} type="button">Open list</button>
+        <button onClick={() => navigate('/campaigns')} type="button">Open list</button>
       </section>
     );
   }
@@ -146,8 +150,8 @@ export function JournalView({ currentCampaignId, onGoToCampaigns, onGoToJournal 
         <h2>Campaign Not Found</h2>
         <p className="error">The campaign ID in this URL is invalid or you do not have access to it.</p>
         <div className="inline-form">
-          <button onClick={onGoToCampaigns} type="button">Open list</button>
-          <button onClick={onGoToJournal} type="button">Open my journal</button>
+          <button onClick={() => navigate('/campaigns')} type="button">Open list</button>
+          <button onClick={() => navigate('/journal')} type="button">Open my journal</button>
         </div>
       </section>
     );

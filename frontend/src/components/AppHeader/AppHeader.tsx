@@ -1,8 +1,12 @@
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useSession } from '../../context/SessionContext/SessionContext';
 import type { AppHeaderProps } from './types';
 
-export function AppHeader({ activeView, onNavigateToView }: AppHeaderProps) {
+export function AppHeader({}: AppHeaderProps) {
   const { me, logout, theme, toggleTheme } = useSession();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeView = location.pathname === '/campaigns' ? 'campaigns' : location.pathname === '/profile' ? 'profile' : 'journal';
 
   return (
     <section className="card header-card">
@@ -21,13 +25,13 @@ export function AppHeader({ activeView, onNavigateToView }: AppHeaderProps) {
 
       <div className="header-actions">
         <div className="tabs">
-          <button className={activeView === 'journal' ? 'active' : ''} onClick={() => onNavigateToView('journal')} type="button">
+          <button className={activeView === 'journal' ? 'active' : ''} onClick={() => navigate('/journal')} type="button">
             Journal
           </button>
-          <button className={activeView === 'campaigns' ? 'active' : ''} onClick={() => onNavigateToView('campaigns')} type="button">
+          <button className={activeView === 'campaigns' ? 'active' : ''} onClick={() => navigate('/campaigns')} type="button">
             Campaigns
           </button>
-          <button className={activeView === 'profile' ? 'active' : ''} onClick={() => onNavigateToView('profile')} type="button">
+          <button className={activeView === 'profile' ? 'active' : ''} onClick={() => navigate('/profile')} type="button">
             Profile
           </button>
           <button onClick={logout} type="button">
