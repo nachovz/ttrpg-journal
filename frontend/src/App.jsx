@@ -166,7 +166,7 @@ export default function App() {
 
   const greeting = useMemo(() => {
     if (!me) return '';
-    return me.role === 'admin' ? 'Admin mode: campaign creation and note editing enabled' : 'User mode';
+    return me.role === 'admin' ? 'Admin mode: campaign creation and note editing enabled' : '';
   }, [me]);
 
   const notesByCampaign = useMemo(() => {
@@ -201,6 +201,8 @@ export default function App() {
     }
     return notesByCampaign.filter((group) => group.campaignId === selectedCampaignId);
   }, [me?.role, notesByCampaign, selectedCampaignId]);
+
+  const isSessionLoading = Boolean(firebaseUser) && isLoading && !me;
 
   async function withToken(fn) {
     if (!firebaseUser) throw new Error('Not authenticated');
@@ -497,18 +499,56 @@ export default function App() {
     );
   }
 
+  if (isSessionLoading) {
+    return (
+      <main className="container" aria-busy="true">
+        <section className="card header-card">
+          <div className="header-user">
+            <div className="header-avatar skeleton skeleton-circle" aria-hidden="true" />
+            <div className="header-info">
+              <div className="skeleton skeleton-title" aria-hidden="true" />
+              <div className="skeleton skeleton-line" aria-hidden="true" />
+              <div className="skeleton skeleton-line short" aria-hidden="true" />
+            </div>
+          </div>
+          <div className="header-actions">
+            <div className="skeleton skeleton-tabs" aria-hidden="true" />
+            <div className="skeleton skeleton-select" aria-hidden="true" />
+          </div>
+        </section>
+
+        <section className="card">
+          <div className="skeleton skeleton-heading" aria-hidden="true" />
+          <div className="skeleton skeleton-editor" aria-hidden="true" />
+          <div className="skeleton skeleton-button" aria-hidden="true" />
+        </section>
+
+        <section className="card">
+          <div className="skeleton skeleton-heading" aria-hidden="true" />
+          <div className="skeleton-stack" aria-hidden="true">
+            <div className="skeleton skeleton-note" />
+            <div className="skeleton skeleton-note" />
+            <div className="skeleton skeleton-note" />
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
-    <main className="container">
+    <main className="container" aria-busy={isLoading ? 'true' : 'false'}>
       <section className="card header-card">
-        <div className="header-avatar">
-          {me?.profileImageUrl ? <img alt={`${me?.username || 'User'} avatar`} src={me.profileImageUrl} /> : '🧙'}
-        </div>
-        <div className="header-info">
-          <h1>Bard's Journal</h1>
-          <p>{me?.username || me?.email}</p>
-          <p className="hint">{me?.email}</p>
-          <p className="hint">Role: {me?.role || 'user'}</p>
-          <p className="hint">{greeting}</p>
+        <div className="header-user">
+          <div className="header-avatar">
+            {me?.profileImageUrl ? <img alt={`${me?.username || 'User'} avatar`} src={me.profileImageUrl} /> : '🧙'}
+          </div>
+          <div className="header-info">
+            <h1>Bard's Journal</h1>
+            <p>{me?.username || me?.email}</p>
+            <p className="hint">{me?.email}</p>
+            {me?.role === 'admin' ? <p className="hint">Role: admin</p> : null}
+            {greeting ? <p className="hint">{greeting}</p> : null}
+          </div>
         </div>
 
         <div className="header-actions">

@@ -59,6 +59,10 @@
     @apply flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between;
   }
 
+  .header-user {
+    @apply flex items-center gap-3;
+  }
+
   .header-avatar {
     @apply grid h-16 w-16 flex-shrink-0 place-items-center overflow-hidden rounded-full border-2 border-amber-700/60 bg-red-100 text-2xl;
   }
@@ -85,6 +89,12 @@
 
   .header-actions {
     @apply grid w-full gap-2 md:w-auto md:justify-items-end;
+  }
+
+  @media (max-width: 767px) {
+    .header-user {
+      @apply w-full;
+    }
   }
 
   .header-campaign {
@@ -207,6 +217,58 @@
     @apply text-zinc-200 hover:bg-zinc-800;
   }
 
+  .skeleton {
+    @apply animate-pulse rounded-md bg-amber-200/75;
+  }
+
+  .dark .skeleton {
+    @apply bg-zinc-700/70;
+  }
+
+  .skeleton-circle {
+    @apply h-16 w-16 rounded-full;
+  }
+
+  .skeleton-title {
+    @apply mb-2 h-8 w-56;
+  }
+
+  .skeleton-line {
+    @apply mb-2 h-4 w-48;
+  }
+
+  .skeleton-line.short {
+    @apply mb-0 w-36;
+  }
+
+  .skeleton-tabs {
+    @apply h-10 w-80;
+  }
+
+  .skeleton-select {
+    @apply h-10 w-72;
+  }
+
+  .skeleton-heading {
+    @apply mb-3 h-8 w-64;
+  }
+
+  .skeleton-editor {
+    @apply mb-3 h-64 w-full;
+  }
+
+  .skeleton-button {
+    @apply h-10 w-32;
+  }
+
+  .skeleton-stack {
+    @apply grid gap-3;
+  }
+
+  .skeleton-note {
+    @apply h-24 w-full;
+  }
+
   .editor {
     @apply mb-2;
   }
@@ -217,12 +279,16 @@
 
   .editor .ql-container {
     @apply rounded-b-md border-amber-700/40 bg-white;
+    height: auto;
     min-height: 220px;
   }
 
   .editor .ql-editor {
     @apply text-stone-900;
+    height: auto;
     min-height: 180px;
+    max-height: 420px;
+    overflow-y: auto;
   }
 
   .dark .editor .ql-toolbar,

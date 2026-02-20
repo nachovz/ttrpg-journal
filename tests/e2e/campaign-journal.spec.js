@@ -90,7 +90,7 @@ test.describe.serial('Campaign journaling flow', () => {
     await page.getByLabel('Password').fill(userPassword);
     await page.getByRole('button', { name: 'Create account' }).click();
 
-    await expect(page.getByText('Role: user')).toBeVisible();
+    await expect(page.getByText(userEmail).first()).toBeVisible();
 
     await page.getByRole('button', { name: 'Campaigns' }).click();
     await page.getByPlaceholder('Join code').fill(joinCode);
