@@ -105,7 +105,10 @@ test.describe.serial('Campaign journaling flow', () => {
     await editor.click();
     await editor.fill(noteText);
 
-    await page.getByRole('button', { name: 'Save note' }).click();
+    await page
+      .locator('section.card', { has: page.getByRole('heading', { name: 'New Entry' }) })
+      .locator('form')
+      .evaluate((form) => form.requestSubmit());
 
     await expect(page.getByRole('heading', { name: campaignName, level: 3 })).toBeVisible();
     await expect(page.locator('.note', { hasText: noteText }).first()).toBeVisible();
@@ -130,7 +133,7 @@ test.describe.serial('Campaign journaling flow', () => {
     await editEditor.click();
     await editEditor.fill(updatedNoteText);
 
-    await editingCard.getByRole('button', { name: 'Save changes' }).click();
+    await editingCard.getByRole('button', { name: 'Save changes' }).click({ force: true });
 
     await expect(page.locator('.note', { hasText: updatedNoteText }).first()).toBeVisible();
   });

@@ -32,17 +32,50 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [autoJoinAttempted, setAutoJoinAttempted] = useState(false);
+  const [theme, setTheme] = useState('light');
   const [autoJoinCode] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return (params.get('join') || '').trim().toUpperCase();
   });
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setFirebaseUser(user);
-      setIsAuthInitializing(false);
-    });
-    return () => unsub();
+    const storedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const nextTheme = storedTheme || (prefersDark ? 'dark' : 'light');
+    setTheme(nextTheme);
+    document.documentElement.classList.toggle('dark', nextTheme === 'dark');
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const timeoutId = window.setTimeout(() => {
+      if (isMounted) {
+        setIsAuthInitializing(false);
+        setError('Session check timed out. You can still log in manually.');
+      }
+    }, 5000);
+
+    const unsub = onAuthStateChanged(
+      auth,
+      (user) => {
+        if (!isMounted) return;
+        window.clearTimeout(timeoutId);
+        setFirebaseUser(user);
+        setIsAuthInitializing(false);
+      },
+      () => {
+        if (!isMounted) return;
+        window.clearTimeout(timeoutId);
+        setIsAuthInitializing(false);
+        setError('Unable to verify session. Please log in again.');
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      window.clearTimeout(timeoutId);
+      unsub();
+    };
   }, []);
 
   useEffect(() => {
@@ -70,6 +103,66 @@ export default function App() {
       window.history.replaceState({}, '', `${url.pathname}${url.search}`);
     });
   }, [firebaseUser, autoJoinCode, autoJoinAttempted]);
+
+  useEffect(() => {
+    function applyQuillA11yLabels() {
+      const buttonLabels = {
+        'ql-bold': 'Bold',
+        'ql-italic': 'Italic',
+        'ql-underline': 'Underline',
+        'ql-link': 'Insert link',
+        'ql-clean': 'Clear formatting',
+      };
+
+      const listLabels = {
+        ordered: 'Ordered list',
+        bullet: 'Bullet list',
+      };
+
+      document.querySelectorAll('.ql-toolbar').forEach((toolbar) => {
+        toolbar.querySelectorAll('button').forEach((button) => {
+          let label = '';
+
+          for (const [className, value] of Object.entries(buttonLabels)) {
+            if (button.classList.contains(className)) {
+              label = value;
+              break;
+            }
+          }
+
+          if (!label && button.classList.contains('ql-list')) {
+            label = listLabels[button.value] || 'List style';
+          }
+          if (!label) {
+            label = 'Editor control';
+          }
+
+          button.setAttribute('aria-label', label);
+          button.setAttribute('title', label);
+        });
+
+        toolbar.querySelectorAll('.ql-picker-label').forEach((pickerLabel) => {
+          const label = 'Text style';
+          pickerLabel.setAttribute('aria-label', label);
+          pickerLabel.setAttribute('title', label);
+        });
+      });
+    }
+
+    const rafId = window.requestAnimationFrame(() => applyQuillA11yLabels());
+
+    const observers = [];
+    document.querySelectorAll('.ql-toolbar').forEach((toolbar) => {
+      const observer = new MutationObserver(() => applyQuillA11yLabels());
+      observer.observe(toolbar, { childList: true, subtree: true });
+      observers.push(observer);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      observers.forEach((observer) => observer.disconnect());
+    };
+  }, [activeView, editingNoteId]);
 
   const greeting = useMemo(() => {
     if (!me) return '';
@@ -325,6 +418,13 @@ export default function App() {
     await signOut(auth);
   }
 
+  function toggleTheme() {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    localStorage.setItem('theme', nextTheme);
+    document.documentElement.classList.toggle('dark', nextTheme === 'dark');
+  }
+
   if (isAuthInitializing) {
     return (
       <main className="container">
@@ -434,6 +534,18 @@ export default function App() {
             >
               Profile
             </button>
+            <button onClick={handleLogout} type="button">
+              Logout
+            </button>
+            <button
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="theme-toggle"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              type="button"
+            >
+              <span aria-hidden="true">{theme === 'dark' ? '☀️' : '🌙'}</span>
+            </button>
           </div>
 
           <label className="header-campaign">
@@ -452,9 +564,6 @@ export default function App() {
             </select>
           </label>
 
-          <button onClick={handleLogout} type="button">
-            Logout
-          </button>
         </div>
       </section>
 
