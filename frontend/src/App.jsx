@@ -13,6 +13,8 @@ import { apiRequest } from './api';
 const emptyAuthForm = { email: '', password: '' };
 const emptyProfileForm = { username: '', characterName: '', dndBeyondUrl: '', profileImageUrl: '' };
 const emptyCampaignForm = { name: '' };
+const journalPlaceholder =
+  "Bard's notebook entry: session #, date, location, party members, key NPCs, quests/objectives, major decisions, combat outcomes, loot/rewards, unresolved mysteries, and next steps. Write clearly so future chronicles can continue this campaign accurately.";
 
 export default function App() {
   const [authMode, setAuthMode] = useState('login');
@@ -810,7 +812,13 @@ export default function App() {
               <section className="card">
                 <h2>New Entry</h2>
                 <form onSubmit={handleCreateNote} className="form">
-                  <ReactQuill className="editor" theme="snow" value={editorHtml} onChange={setEditorHtml} />
+                  <ReactQuill
+                    className="editor"
+                    theme="snow"
+                    value={editorHtml}
+                    onChange={setEditorHtml}
+                    placeholder={journalPlaceholder}
+                  />
                   <button disabled={isLoading || !selectedCampaignId} type="submit">
                     Save note
                   </button>
@@ -847,7 +855,13 @@ export default function App() {
 
                             {editingNoteId === note.id ? (
                               <div className="form">
-                                <ReactQuill className="editor" theme="snow" value={editNoteHtml} onChange={setEditNoteHtml} />
+                                <ReactQuill
+                                  className="editor"
+                                  theme="snow"
+                                  value={editNoteHtml}
+                                  onChange={setEditNoteHtml}
+                                  placeholder={journalPlaceholder}
+                                />
                                 <div className="inline-form">
                                   <button disabled={isLoading} onClick={() => handleAdminUpdateNote(note.id)} type="button">
                                     Save changes

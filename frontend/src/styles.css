@@ -308,6 +308,10 @@
     @apply text-zinc-100;
   }
 
+  .dark .editor .ql-editor.ql-blank::before {
+    color: #a1a1aa;
+  }
+
   .dark .editor .ql-stroke {
     stroke: #fafafa;
   }
