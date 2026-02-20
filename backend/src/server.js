@@ -107,6 +107,28 @@ async function getCampaignById(campaignId) {
   return { id: campaignDoc.id, ...campaignDoc.data() };
 }
 
+async function deleteNotesByCampaignId(campaignId) {
+  const notesCollection = db.collection('notes');
+  let deletedCount = 0;
+
+  while (true) {
+    const snapshot = await notesCollection.where('campaignId', '==', campaignId).limit(400).get();
+    if (snapshot.empty) {
+      break;
+    }
+
+    const batch = db.batch();
+    snapshot.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+    deletedCount += snapshot.size;
+  }
+
+  return deletedCount;
+}
+
 function ensureCampaignMember(campaign, uid) {
   const memberIds = Array.isArray(campaign.memberIds) ? campaign.memberIds : [];
   return memberIds.includes(uid);
@@ -119,6 +141,7 @@ function campaignToResponse(campaign) {
     joinCode: campaign.joinCode,
     joinLink: `${frontendOrigin}/?join=${encodeURIComponent(campaign.joinCode)}`,
     createdAt: campaign.createdAt,
+    updatedAt: campaign.updatedAt || campaign.createdAt,
     createdBy: campaign.createdBy,
     memberIds: campaign.memberIds || [],
   };
@@ -237,6 +260,7 @@ app.post('/api/campaigns', { preHandler: verifyAuthToken }, async (request, repl
     joinCode,
     createdBy: request.user.uid,
     createdAt: now,
+    updatedAt: now,
     memberIds: [request.user.uid],
   };
 
@@ -263,12 +287,35 @@ app.post('/api/campaigns/join', { preHandler: verifyAuthToken }, async (request,
     if (!currentMemberIds.includes(request.user.uid)) {
       transaction.update(campaignRef, {
         memberIds: [...currentMemberIds, request.user.uid],
+        updatedAt: new Date().toISOString(),
       });
     }
   });
 
   const updatedCampaign = await getCampaignById(campaign.id);
   return campaignToResponse(updatedCampaign);
+});
+
+app.delete('/api/campaigns/:id', { preHandler: verifyAuthToken }, async (request, reply) => {
+  if (request.user.role !== 'admin') {
+    return reply.code(403).send({ error: 'Only admins can delete campaigns' });
+  }
+
+  const campaignId = String(request.params?.id || '').trim();
+  if (!campaignId) {
+    return reply.code(400).send({ error: 'campaign id is required' });
+  }
+
+  const campaignRef = db.collection('campaigns').doc(campaignId);
+  const campaignDoc = await campaignRef.get();
+  if (!campaignDoc.exists) {
+    return reply.code(404).send({ error: 'Campaign not found' });
+  }
+
+  const deletedNotes = await deleteNotesByCampaignId(campaignId);
+  await campaignRef.delete();
+
+  return { success: true, campaignId, deletedNotes };
 });
 
 app.post('/api/notes', { preHandler: verifyAuthToken }, async (request, reply) => {

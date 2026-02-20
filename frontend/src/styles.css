@@ -217,6 +217,14 @@
     @apply text-zinc-200 hover:bg-zinc-800;
   }
 
+  .button-danger {
+    @apply bg-red-800 hover:bg-red-900;
+  }
+
+  .dark .button-danger {
+    @apply bg-rose-700 hover:bg-rose-800;
+  }
+
   .skeleton {
     @apply animate-pulse rounded-md bg-amber-200/75;
   }

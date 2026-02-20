@@ -5,6 +5,7 @@ import {
   signOut,
   onAuthStateChanged,
 } from 'firebase/auth';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import ReactQuill from 'react-quill';
 import { auth } from './firebase';
 import { apiRequest } from './api';
@@ -26,7 +27,6 @@ export default function App() {
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
   const [campaignForm, setCampaignForm] = useState(emptyCampaignForm);
   const [joinCodeInput, setJoinCodeInput] = useState('');
-  const [activeView, setActiveView] = useState('journal');
   const [editingNoteId, setEditingNoteId] = useState('');
   const [editNoteHtml, setEditNoteHtml] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -37,6 +37,14 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     return (params.get('join') || '').trim().toUpperCase();
   });
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const activeView = useMemo(() => {
+    if (location.pathname === '/campaigns') return 'campaigns';
+    if (location.pathname === '/profile') return 'profile';
+    return 'journal';
+  }, [location.pathname]);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme');
@@ -90,6 +98,15 @@ export default function App() {
 
     refreshSession();
   }, [firebaseUser]);
+
+  useEffect(() => {
+    if (!firebaseUser) {
+      return;
+    }
+    if (!['/journal', '/campaigns', '/profile'].includes(location.pathname)) {
+      navigate('/journal', { replace: true });
+    }
+  }, [firebaseUser, location.pathname, navigate]);
 
   useEffect(() => {
     if (!firebaseUser || !autoJoinCode || autoJoinAttempted) {
@@ -380,6 +397,36 @@ export default function App() {
     }
   }
 
+  async function handleDeleteCampaign(campaign) {
+    if (me?.role !== 'admin') {
+      setError('Only admins can delete campaigns');
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      `Delete campaign "${campaign.name}" and all its journal entries? This cannot be undone.`
+    );
+    if (!shouldDelete) {
+      return;
+    }
+
+    setError('');
+    setIsLoading(true);
+
+    try {
+      await withToken(async (token) => {
+        await apiRequest(`/api/campaigns/${campaign.id}`, token, {
+          method: 'DELETE',
+        });
+      });
+      await refreshSession();
+    } catch (err) {
+      setError(err.message || 'Unable to delete campaign');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   function startEditNote(note) {
     setEditingNoteId(note.id);
     setEditNoteHtml(note.contentHtml || '');
@@ -420,11 +467,25 @@ export default function App() {
     await signOut(auth);
   }
 
+  function goToView(view) {
+    const path = view === 'campaigns' ? '/campaigns' : view === 'profile' ? '/profile' : '/journal';
+    if (location.pathname !== path) {
+      navigate(path);
+    }
+  }
+
   function toggleTheme() {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
     localStorage.setItem('theme', nextTheme);
     document.documentElement.classList.toggle('dark', nextTheme === 'dark');
+  }
+
+  function formatDateTime(value) {
+    if (!value) return 'N/A';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return 'N/A';
+    return parsed.toLocaleString();
   }
 
   if (isAuthInitializing) {
@@ -555,21 +616,21 @@ export default function App() {
           <div className="tabs">
             <button
               className={activeView === 'journal' ? 'active' : ''}
-              onClick={() => setActiveView('journal')}
+              onClick={() => goToView('journal')}
               type="button"
             >
               Journal
             </button>
             <button
               className={activeView === 'campaigns' ? 'active' : ''}
-              onClick={() => setActiveView('campaigns')}
+              onClick={() => goToView('campaigns')}
               type="button"
             >
               Campaigns
             </button>
             <button
               className={activeView === 'profile' ? 'active' : ''}
-              onClick={() => setActiveView('profile')}
+              onClick={() => goToView('profile')}
               type="button"
             >
               Profile
@@ -607,191 +668,217 @@ export default function App() {
         </div>
       </section>
 
-      {activeView === 'profile' ? (
-        <section className="card">
-          <h2>Profile</h2>
-          <form onSubmit={handleProfileSave} className="form">
-            <label>
-              Username
-              <input
-                type="text"
-                value={profileForm.username}
-                onChange={(event) =>
-                  setProfileForm((prev) => ({ ...prev, username: event.target.value }))
-                }
-                required
-                maxLength={50}
-              />
-            </label>
-
-            <label>
-              Character Name
-              <input
-                type="text"
-                value={profileForm.characterName}
-                onChange={(event) =>
-                  setProfileForm((prev) => ({ ...prev, characterName: event.target.value }))
-                }
-                maxLength={80}
-              />
-            </label>
-
-            <label>
-              D&D Beyond Character Sheet URL
-              <input
-                type="url"
-                value={profileForm.dndBeyondUrl}
-                onChange={(event) =>
-                  setProfileForm((prev) => ({ ...prev, dndBeyondUrl: event.target.value }))
-                }
-                placeholder="https://www.dndbeyond.com/characters/..."
-              />
-            </label>
-
-            <label>
-              Profile Image URL
-              <input
-                type="url"
-                value={profileForm.profileImageUrl}
-                onChange={(event) =>
-                  setProfileForm((prev) => ({ ...prev, profileImageUrl: event.target.value }))
-                }
-                placeholder="https://example.com/avatar.png"
-              />
-            </label>
-
-            <button disabled={isLoading} type="submit">
-              Save profile
-            </button>
-          </form>
-        </section>
-      ) : null}
-
-      {activeView === 'campaigns' ? (
-        <>
-          <section className="card">
-            <h2>Join Campaign</h2>
-            <form onSubmit={handleJoinCampaign} className="form inline-form">
-              <input
-                type="text"
-                value={joinCodeInput}
-                onChange={(event) => setJoinCodeInput(event.target.value.toUpperCase())}
-                placeholder="Join code"
-              />
-              <button disabled={isLoading} type="submit">
-                Join
-              </button>
-            </form>
-          </section>
-
-          {me?.role === 'admin' ? (
+      <Routes>
+        <Route
+          path="/profile"
+          element={(
             <section className="card">
-              <h2>Create Campaign</h2>
-              <form onSubmit={handleCreateCampaign} className="form inline-form">
-                <input
-                  type="text"
-                  value={campaignForm.name}
-                  onChange={(event) => setCampaignForm({ name: event.target.value })}
-                  placeholder="Campaign name"
-                  maxLength={80}
-                  required
-                />
+              <h2>Profile</h2>
+              <form onSubmit={handleProfileSave} className="form">
+                <label>
+                  Username
+                  <input
+                    type="text"
+                    value={profileForm.username}
+                    onChange={(event) =>
+                      setProfileForm((prev) => ({ ...prev, username: event.target.value }))
+                    }
+                    required
+                    maxLength={50}
+                  />
+                </label>
+
+                <label>
+                  Character Name
+                  <input
+                    type="text"
+                    value={profileForm.characterName}
+                    onChange={(event) =>
+                      setProfileForm((prev) => ({ ...prev, characterName: event.target.value }))
+                    }
+                    maxLength={80}
+                  />
+                </label>
+
+                <label>
+                  D&D Beyond Character Sheet URL
+                  <input
+                    type="url"
+                    value={profileForm.dndBeyondUrl}
+                    onChange={(event) =>
+                      setProfileForm((prev) => ({ ...prev, dndBeyondUrl: event.target.value }))
+                    }
+                    placeholder="https://www.dndbeyond.com/characters/..."
+                  />
+                </label>
+
+                <label>
+                  Profile Image URL
+                  <input
+                    type="url"
+                    value={profileForm.profileImageUrl}
+                    onChange={(event) =>
+                      setProfileForm((prev) => ({ ...prev, profileImageUrl: event.target.value }))
+                    }
+                    placeholder="https://example.com/avatar.png"
+                  />
+                </label>
+
                 <button disabled={isLoading} type="submit">
-                  Create
+                  Save profile
                 </button>
               </form>
             </section>
-          ) : null}
+          )}
+        />
 
-          <section className="card">
-            <h2>My Campaigns</h2>
-            {campaigns.length === 0 ? <p>No campaigns yet. Join one from a link or code.</p> : null}
-            <div className="campaign-list">
-              {campaigns.map((campaign) => (
-                <article className="campaign-item" key={campaign.id}>
-                  <strong>{campaign.name}</strong>
-                  <span>Join code: {campaign.joinCode}</span>
-                  <a href={campaign.joinLink} target="_blank" rel="noreferrer">
-                    {campaign.joinLink}
-                  </a>
-                </article>
-              ))}
-            </div>
-          </section>
-        </>
-      ) : null}
+        <Route
+          path="/campaigns"
+          element={(
+            <>
+              <section className="card">
+                <h2>Join Campaign</h2>
+                <form onSubmit={handleJoinCampaign} className="form inline-form">
+                  <input
+                    type="text"
+                    value={joinCodeInput}
+                    onChange={(event) => setJoinCodeInput(event.target.value.toUpperCase())}
+                    placeholder="Join code"
+                  />
+                  <button disabled={isLoading} type="submit">
+                    Join
+                  </button>
+                </form>
+              </section>
 
-      {activeView === 'journal' ? (
-        <>
-          <section className="card">
-            <h2>New Entry</h2>
-            <form onSubmit={handleCreateNote} className="form">
-              <ReactQuill className="editor" theme="snow" value={editorHtml} onChange={setEditorHtml} />
-              <button disabled={isLoading || !selectedCampaignId} type="submit">
-                Save note
-              </button>
-            </form>
-          </section>
-
-          <section className="card">
-            <h2>{me?.role === 'admin' ? 'Journal Entries (Selected Campaign)' : 'Campaign Journal Entries'}</h2>
-            {visibleNotesByCampaign.length === 0 ? (
-              <p>{me?.role === 'admin' ? 'No entries for the selected campaign.' : 'No entries yet.'}</p>
-            ) : null}
-            <div className="notes-group-list">
-              {visibleNotesByCampaign.map((group) => (
-                <section className="note-group" key={group.campaignId}>
-                  <h3>{group.campaignName}</h3>
-                  <div className="notes-grid">
-                    {group.notes.map((note) => (
-                      <article className="note" key={note.id}>
-                        <div className="meta">
-                          {note.profileImageUrl ? (
-                            <img className="note-avatar" alt={`${note.username || note.userEmail} avatar`} src={note.profileImageUrl} />
-                          ) : null}
-                          <strong>{note.username || note.userEmail}</strong>
-                          {note.characterName ? <span>Character: {note.characterName}</span> : null}
-                          {note.dndBeyondUrl ? (
-                            <a href={note.dndBeyondUrl} target="_blank" rel="noreferrer">
-                              Character sheet
-                            </a>
-                          ) : null}
-                          <span>Entry date: {note.entryDate}</span>
-                          <span>Created at: {new Date(note.createdAt).toLocaleString()}</span>
-                          {note.updatedAt ? <span>Updated: {new Date(note.updatedAt).toLocaleString()}</span> : null}
-                        </div>
-
-                        {editingNoteId === note.id ? (
-                          <div className="form">
-                            <ReactQuill className="editor" theme="snow" value={editNoteHtml} onChange={setEditNoteHtml} />
-                            <div className="inline-form">
-                              <button disabled={isLoading} onClick={() => handleAdminUpdateNote(note.id)} type="button">
-                                Save changes
-                              </button>
-                              <button disabled={isLoading} onClick={cancelEditNote} type="button">
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div dangerouslySetInnerHTML={{ __html: note.contentHtml }} />
-                            {me?.role === 'admin' ? (
-                              <button onClick={() => startEditNote(note)} type="button">
-                                Edit entry
-                              </button>
-                            ) : null}
-                          </>
-                        )}
-                      </article>
-                    ))}
-                  </div>
+              {me?.role === 'admin' ? (
+                <section className="card">
+                  <h2>Create Campaign</h2>
+                  <form onSubmit={handleCreateCampaign} className="form inline-form">
+                    <input
+                      type="text"
+                      value={campaignForm.name}
+                      onChange={(event) => setCampaignForm({ name: event.target.value })}
+                      placeholder="Campaign name"
+                      maxLength={80}
+                      required
+                    />
+                    <button disabled={isLoading} type="submit">
+                      Create
+                    </button>
+                  </form>
                 </section>
-              ))}
-            </div>
-          </section>
-        </>
-      ) : null}
+              ) : null}
+
+              <section className="card">
+                <h2>My Campaigns</h2>
+                {campaigns.length === 0 ? <p>No campaigns yet. Join one from a link or code.</p> : null}
+                <div className="campaign-list">
+                  {campaigns.map((campaign) => (
+                    <article className="campaign-item" key={campaign.id}>
+                      <strong>{campaign.name}</strong>
+                      <span>Join code: {campaign.joinCode}</span>
+                      <a href={campaign.joinLink} target="_blank" rel="noreferrer">
+                        {campaign.joinLink}
+                      </a>
+                      {me?.role === 'admin' ? (
+                        <span className="hint">Created: {formatDateTime(campaign.createdAt)}</span>
+                      ) : null}
+                      <span className="hint">Last updated: {formatDateTime(campaign.updatedAt || campaign.createdAt)}</span>
+                      {me?.role === 'admin' ? (
+                        <button
+                          className="button-danger"
+                          disabled={isLoading}
+                          onClick={() => handleDeleteCampaign(campaign)}
+                          type="button"
+                        >
+                          Delete campaign
+                        </button>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
+        />
+
+        <Route
+          path="/journal"
+          element={(
+            <>
+              <section className="card">
+                <h2>New Entry</h2>
+                <form onSubmit={handleCreateNote} className="form">
+                  <ReactQuill className="editor" theme="snow" value={editorHtml} onChange={setEditorHtml} />
+                  <button disabled={isLoading || !selectedCampaignId} type="submit">
+                    Save note
+                  </button>
+                </form>
+              </section>
+
+              <section className="card">
+                <h2>{me?.role === 'admin' ? 'Journal Entries (Selected Campaign)' : 'Campaign Journal Entries'}</h2>
+                {visibleNotesByCampaign.length === 0 ? (
+                  <p>{me?.role === 'admin' ? 'No entries for the selected campaign.' : 'No entries yet.'}</p>
+                ) : null}
+                <div className="notes-group-list">
+                  {visibleNotesByCampaign.map((group) => (
+                    <section className="note-group" key={group.campaignId}>
+                      <h3>{group.campaignName}</h3>
+                      <div className="notes-grid">
+                        {group.notes.map((note) => (
+                          <article className="note" key={note.id}>
+                            <div className="meta">
+                              {note.profileImageUrl ? (
+                                <img className="note-avatar" alt={`${note.username || note.userEmail} avatar`} src={note.profileImageUrl} />
+                              ) : null}
+                              <strong>{note.username || note.userEmail}</strong>
+                              {note.characterName ? <span>Character: {note.characterName}</span> : null}
+                              {note.dndBeyondUrl ? (
+                                <a href={note.dndBeyondUrl} target="_blank" rel="noreferrer">
+                                  Character sheet
+                                </a>
+                              ) : null}
+                              <span>Entry date: {note.entryDate}</span>
+                              <span>Created at: {new Date(note.createdAt).toLocaleString()}</span>
+                              {note.updatedAt ? <span>Updated: {new Date(note.updatedAt).toLocaleString()}</span> : null}
+                            </div>
+
+                            {editingNoteId === note.id ? (
+                              <div className="form">
+                                <ReactQuill className="editor" theme="snow" value={editNoteHtml} onChange={setEditNoteHtml} />
+                                <div className="inline-form">
+                                  <button disabled={isLoading} onClick={() => handleAdminUpdateNote(note.id)} type="button">
+                                    Save changes
+                                  </button>
+                                  <button disabled={isLoading} onClick={cancelEditNote} type="button">
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div dangerouslySetInnerHTML={{ __html: note.contentHtml }} />
+                                {me?.role === 'admin' ? (
+                                  <button onClick={() => startEditNote(note)} type="button">
+                                    Edit entry
+                                  </button>
+                                ) : null}
+                              </>
+                            )}
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
+        />
+        <Route path="*" element={<Navigate replace to="/journal" />} />
+      </Routes>
 
       {error ? <p className="error">{error}</p> : null}
     </main>
