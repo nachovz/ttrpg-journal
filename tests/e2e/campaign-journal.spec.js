@@ -59,6 +59,8 @@ test.describe.serial('Campaign journaling flow', () => {
   const userEmail = `e2e.user.${suffix}@example.com`;
   const userPassword = 'StrongPass123!';
   const noteText = `E2E note ${suffix}`;
+  const adminPrivateNoteText = `E2E admin private note ${suffix}`;
+  const adminPublicNoteText = `E2E admin public note ${suffix}`;
 
   let joinCode = '';
 
@@ -78,6 +80,27 @@ test.describe.serial('Campaign journaling flow', () => {
     const match = joinText.match(/Join code:\s*(\S+)/i);
     expect(match).toBeTruthy();
     joinCode = match[1];
+
+    await campaignCard.getByRole('button', { name: 'Load campaign journal' }).click();
+
+    const adminEditor = page.locator('.editor .ql-editor').first();
+    await adminEditor.click();
+    await adminEditor.fill(adminPrivateNoteText);
+    await page.getByLabel('Visibility').selectOption('private');
+    await page
+      .locator('section.card', { has: page.getByRole('heading', { name: 'New Entry' }) })
+      .locator('form')
+      .evaluate((form) => form.requestSubmit());
+    await expect(page.locator('.note', { hasText: adminPrivateNoteText }).first()).toBeVisible();
+
+    await adminEditor.click();
+    await adminEditor.fill(adminPublicNoteText);
+    await page.getByLabel('Visibility').selectOption('public');
+    await page
+      .locator('section.card', { has: page.getByRole('heading', { name: 'New Entry' }) })
+      .locator('form')
+      .evaluate((form) => form.requestSubmit());
+    await expect(page.locator('.note', { hasText: adminPublicNoteText }).first()).toBeVisible();
 
     await logout(page);
   });
@@ -102,6 +125,9 @@ test.describe.serial('Campaign journaling flow', () => {
       .first()
       .getByRole('button', { name: 'Load campaign journal' })
       .click();
+
+    await expect(page.locator('.note', { hasText: adminPublicNoteText }).first()).toBeVisible();
+    await expect(page.locator('.note', { hasText: adminPrivateNoteText })).toHaveCount(0);
 
     const editor = page.locator('.editor .ql-editor').first();
     await editor.click();

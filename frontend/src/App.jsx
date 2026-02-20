@@ -13,6 +13,7 @@ import { apiRequest } from './api';
 const emptyAuthForm = { email: '', password: '' };
 const emptyProfileForm = { username: '', characterName: '', dndBeyondUrl: '', profileImageUrl: '' };
 const emptyCampaignForm = { name: '' };
+const defaultAdminVisibility = 'private';
 const journalPlaceholder =
   "Bard's notebook entry: session #, date, location, party members, key NPCs, quests/objectives, major decisions, combat outcomes, loot/rewards, unresolved mysteries, and next steps. Write clearly so future chronicles can continue this campaign accurately.";
 
@@ -30,6 +31,7 @@ export default function App() {
   const [profileForm, setProfileForm] = useState(emptyProfileForm);
   const [campaignForm, setCampaignForm] = useState(emptyCampaignForm);
   const [joinCodeInput, setJoinCodeInput] = useState('');
+  const [adminEntryVisibility, setAdminEntryVisibility] = useState(defaultAdminVisibility);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [autoJoinAttempted, setAutoJoinAttempted] = useState(false);
@@ -353,11 +355,16 @@ export default function App() {
       await withToken(async (token) => {
         await apiRequest('/api/notes', token, {
           method: 'POST',
-          body: JSON.stringify({ contentHtml: editorHtml, campaignId: selectedCampaignId }),
+          body: JSON.stringify({
+            contentHtml: editorHtml,
+            campaignId: selectedCampaignId,
+            ...(me?.role === 'admin' ? { visibility: adminEntryVisibility } : {}),
+          }),
         });
       });
 
       setEditorHtml('');
+      setAdminEntryVisibility(defaultAdminVisibility);
       await refreshSession();
     } catch (err) {
       setError(err.message || 'Unable to save note');
@@ -920,6 +927,18 @@ export default function App() {
                   <section className="card">
                     <h2>New Entry</h2>
                     <form onSubmit={handleCreateNote} className="form">
+                      {me?.role === 'admin' ? (
+                        <label>
+                          Visibility
+                          <select
+                            value={adminEntryVisibility}
+                            onChange={(event) => setAdminEntryVisibility(event.target.value)}
+                          >
+                            <option value="private">Private (admin only)</option>
+                            <option value="public">Public (all campaign members)</option>
+                          </select>
+                        </label>
+                      ) : null}
                       <ReactQuill
                         className="editor"
                         theme="snow"
@@ -957,7 +976,7 @@ export default function App() {
                               <div className="chat-thread">
                                 {dayGroup.notes.map((note) => (
                                   <article className="note chat-message" key={note.id}>
-                                    <div className="meta chat-meta">
+                                <div className="meta chat-meta">
                                       {note.profileImageUrl ? (
                                         <img className="note-avatar" alt={`${note.username || note.userEmail} avatar`} src={note.profileImageUrl} />
                                       ) : (
@@ -968,6 +987,9 @@ export default function App() {
                                         <span>Character: {note.characterName || 'Not set'}</span>
                                       </div>
                                       <span>{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                      {note.userRole === 'admin' ? (
+                                        <span>{note.visibility === 'public' ? 'Public' : 'Private'}</span>
+                                      ) : null}
                                       {note.dndBeyondUrl ? (
                                         <a href={note.dndBeyondUrl} target="_blank" rel="noreferrer">
                                           Character sheet

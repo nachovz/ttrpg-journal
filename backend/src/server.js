@@ -151,6 +151,15 @@ function ensureCampaignMember(campaign, uid) {
   return memberIds.includes(uid);
 }
 
+function isAdminEmail(email) {
+  return adminEmails.includes(String(email || '').toLowerCase());
+}
+
+function isAdminNote(note = {}) {
+  if (note.userRole === 'admin') return true;
+  return isAdminEmail(note.userEmail);
+}
+
 function campaignToResponse(campaign) {
   return {
     id: campaign.id,
@@ -165,7 +174,7 @@ function campaignToResponse(campaign) {
 }
 
 async function ensureRoleFromEmail(user) {
-  const role = adminEmails.includes((user.email || '').toLowerCase()) ? 'admin' : 'user';
+  const role = isAdminEmail(user.email) ? 'admin' : 'user';
   if (user.customClaims?.role !== role) {
     await auth.setCustomUserClaims(user.uid, { ...(user.customClaims || {}), role });
   }
@@ -181,7 +190,7 @@ async function verifyAuthToken(request, reply) {
   const token = authHeader.slice('Bearer '.length);
   try {
     const decoded = await auth.verifyIdToken(token, true);
-    const role = decoded.role || (adminEmails.includes((decoded.email || '').toLowerCase()) ? 'admin' : 'user');
+    const role = decoded.role || (isAdminEmail(decoded.email) ? 'admin' : 'user');
 
     request.user = {
       uid: decoded.uid,
@@ -403,7 +412,7 @@ app.put('/api/journal-day-labels/:campaignId/:entryDate', { preHandler: verifyAu
 });
 
 app.post('/api/notes', { preHandler: verifyAuthToken }, async (request, reply) => {
-  const { contentHtml, campaignId } = request.body || {};
+  const { contentHtml, campaignId, visibility: requestedVisibility } = request.body || {};
   if (!contentHtml || typeof contentHtml !== 'string') {
     return reply.code(400).send({ error: 'contentHtml is required' });
   }
@@ -424,15 +433,25 @@ app.post('/api/notes', { preHandler: verifyAuthToken }, async (request, reply) =
   const userData = userDoc.exists ? userDoc.data() : {};
 
   const now = new Date();
+  const visibility =
+    request.user.role === 'admin'
+      ? String(requestedVisibility || 'private').toLowerCase()
+      : 'public';
+  if (!['public', 'private'].includes(visibility)) {
+    return reply.code(400).send({ error: 'visibility must be public or private' });
+  }
+
   const note = {
     userId: request.user.uid,
     userEmail: request.user.email,
+    userRole: request.user.role,
     username: userData.username || '',
     characterName: userData.characterName || '',
     dndBeyondUrl: userData.dndBeyondUrl || '',
     profileImageUrl: userData.profileImageUrl || '',
     campaignId: campaign.id,
     campaignName: campaign.name,
+    visibility,
     contentHtml,
     entryDate: now.toISOString().split('T')[0],
     createdAt: now.toISOString(),
@@ -465,6 +484,10 @@ app.get('/api/notes', { preHandler: verifyAuthToken }, async (request) => {
 
   return noteSnapshots
     .flatMap((snapshot) => snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })))
+    .filter((note) => {
+      if (!isAdminNote(note)) return true;
+      return String(note.visibility || 'private').toLowerCase() === 'public';
+    })
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 });
 
