@@ -10,16 +10,7 @@ import { SessionProvider, useSession } from './context/SessionContext/SessionCon
 import { useQuillA11y } from './hooks/useQuillA11y';
 
 function AppShell() {
-  const {
-    campaigns,
-    error,
-    firebaseUser,
-    isAuthInitializing,
-    isLoading,
-    me,
-    selectedCampaignId,
-    setSelectedCampaignId,
-  } = useSession();
+  const { error, firebaseUser, isAuthInitializing, isLoading, me } = useSession();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -34,9 +25,7 @@ function AppShell() {
     return 'journal';
   }, [location.pathname]);
 
-  const isJournalRoute = location.pathname.startsWith('/journal');
-  const isRouteCampaignValid = Boolean(routeCampaignId) && campaigns.some((campaign) => campaign.id === routeCampaignId);
-  const showInvalidCampaignPage = isJournalRoute && Boolean(routeCampaignId) && Boolean(me) && !isLoading && !isRouteCampaignValid;
+  const currentCampaignId = routeCampaignId;
 
   useEffect(() => {
     if (!firebaseUser) return;
@@ -50,23 +39,11 @@ function AppShell() {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!campaigns.length || !routeCampaignId) return;
-    if (!campaigns.some((campaign) => campaign.id === routeCampaignId)) return;
-    if (routeCampaignId !== selectedCampaignId) {
-      setSelectedCampaignId(routeCampaignId);
-    }
-  }, [campaigns, routeCampaignId, selectedCampaignId, setSelectedCampaignId]);
-
-  useEffect(() => {
     if (!location.pathname.startsWith('/journal')) return;
-    if (showInvalidCampaignPage) return;
-    if (routeCampaignId && routeCampaignId !== selectedCampaignId) return;
-
-    const expectedPath = selectedCampaignId ? `/journal/${encodeURIComponent(selectedCampaignId)}` : '/journal';
-    if (location.pathname !== expectedPath) {
-      navigate(expectedPath, { replace: true });
+    if (!currentCampaignId && location.pathname !== '/journal') {
+      navigate('/journal', { replace: true });
     }
-  }, [location.pathname, navigate, routeCampaignId, selectedCampaignId, showInvalidCampaignPage]);
+  }, [currentCampaignId, location.pathname, navigate]);
 
   function handleViewNavigation(view: 'journal' | 'campaigns' | 'profile') {
     if (view === 'campaigns') {
@@ -78,12 +55,12 @@ function AppShell() {
       return;
     }
 
-    const journalPath = selectedCampaignId ? `/journal/${encodeURIComponent(selectedCampaignId)}` : '/journal';
+    const journalPath = currentCampaignId ? `/journal/${encodeURIComponent(currentCampaignId)}` : '/journal';
     navigate(journalPath);
   }
 
   function goToSelectedJournal() {
-    navigate(selectedCampaignId ? `/journal/${encodeURIComponent(selectedCampaignId)}` : '/journal');
+    navigate('/journal');
   }
 
   if (isAuthInitializing) {
@@ -123,7 +100,7 @@ function AppShell() {
           path="/journal/*"
           element={
             <JournalView
-              showInvalidCampaignPage={showInvalidCampaignPage}
+              currentCampaignId={currentCampaignId}
               onGoToCampaigns={() => navigate('/campaigns')}
               onGoToJournal={goToSelectedJournal}
             />

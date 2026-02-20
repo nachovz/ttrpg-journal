@@ -1,5 +1,5 @@
 export interface JournalViewProps {
-  showInvalidCampaignPage: boolean;
+  currentCampaignId: string;
   onGoToCampaigns: () => void;
   onGoToJournal: () => void;
 }

@@ -17,7 +17,7 @@ import type {
   SessionUser,
 } from '../../types/entities';
 import { EMPTY_AUTH_FORM, EMPTY_PROFILE_FORM, getAutoJoinCodeFromUrl } from './defaults';
-import { fetchSessionPayload } from './sessionApi';
+import { fetchCampaignById as fetchCampaignByIdRequest, fetchSessionPayload } from './sessionApi';
 import { useSessionActions } from './sessionActions';
 import { useAuthLifecycle, useAutoJoinCampaign, useThemeInitialization } from './sessionEffects';
 import type { SessionContextValue } from './types';
@@ -37,7 +37,6 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [journalDayLabels, setJournalDayLabels] = useState<JournalDayLabel[]>([]);
-  const [selectedCampaignId, setSelectedCampaignId] = useState('');
   const [profileForm, setProfileForm] = useState<ProfileFormState>(EMPTY_PROFILE_FORM);
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [campaignNameInput, setCampaignNameInput] = useState('');
@@ -76,12 +75,6 @@ export function SessionProvider({ children }: SessionProviderProps) {
         setCampaigns(payload.campaigns);
         setNotes(payload.notes);
         setJournalDayLabels(payload.dayLabels);
-        setSelectedCampaignId((previousCampaignId) => {
-          if (previousCampaignId && payload.campaigns.some((campaign) => campaign.id === previousCampaignId)) {
-            return previousCampaignId;
-          }
-          return payload.campaigns[0]?.id || '';
-        });
       });
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to load session');
@@ -119,13 +112,19 @@ export function SessionProvider({ children }: SessionProviderProps) {
     setJoinCodeInput,
   });
 
+  const fetchCampaignById = useCallback(
+    async (campaignId: string) => {
+      return withToken((token) => fetchCampaignByIdRequest(token, campaignId));
+    },
+    [withToken]
+  );
+
   useEffect(() => {
     if (!firebaseUser) {
       setMe(null);
       setNotes([]);
       setCampaigns([]);
       setJournalDayLabels([]);
-      setSelectedCampaignId('');
       setAutoJoinAttempted(false);
       return;
     }
@@ -158,7 +157,6 @@ export function SessionProvider({ children }: SessionProviderProps) {
       notes,
       campaigns,
       journalDayLabels,
-      selectedCampaignId,
       profileForm,
       joinCodeInput,
       campaignNameInput,
@@ -167,7 +165,6 @@ export function SessionProvider({ children }: SessionProviderProps) {
       theme,
       setAuthMode,
       setAuthForm,
-      setSelectedCampaignId,
       setProfileForm,
       setJoinCodeInput,
       setCampaignNameInput,
@@ -178,6 +175,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
       joinCampaign,
       createCampaign,
       deleteCampaign,
+      fetchCampaignById,
       createNote,
       setDayGroupTitle,
       logout,
@@ -191,6 +189,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
       createCampaign,
       createNote,
       deleteCampaign,
+      fetchCampaignById,
       error,
       firebaseUser,
       isAuthInitializing,
@@ -204,7 +203,6 @@ export function SessionProvider({ children }: SessionProviderProps) {
       profileForm,
       refreshSession,
       saveProfile,
-      selectedCampaignId,
       setDayGroupTitle,
       submitAuthForm,
       theme,

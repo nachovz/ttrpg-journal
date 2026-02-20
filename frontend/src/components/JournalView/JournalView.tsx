@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ReactQuill from 'react-quill';
 import { AdminJournalChat } from '../AdminJournalChat/AdminJournalChat';
 import { UserJournalList } from '../UserJournalList/UserJournalList';
 import { useSession } from '../../context/SessionContext/SessionContext';
-import type { Note } from '../../types/entities';
+import type { Campaign, Note } from '../../types/entities';
 import type { JournalViewProps } from './types';
 
 const JOURNAL_PLACEHOLDER =
@@ -13,56 +13,66 @@ function getNoteDay(note: Note) {
   return String(note.entryDate || '').trim() || String(note.createdAt || '').slice(0, 10) || 'Unknown';
 }
 
-export function JournalView({ showInvalidCampaignPage, onGoToCampaigns, onGoToJournal }: JournalViewProps) {
+export function JournalView({ currentCampaignId, onGoToCampaigns, onGoToJournal }: JournalViewProps) {
   const {
-    campaigns,
     createNote,
+    fetchCampaignById,
     isLoading,
     journalDayLabels,
     me,
     notes,
-    selectedCampaignId,
     setError,
     setDayGroupTitle,
   } = useSession();
 
   const [editorHtml, setEditorHtml] = useState('');
   const [adminEntryVisibility, setAdminEntryVisibility] = useState<'public' | 'private'>('private');
+  const [campaignDetails, setCampaignDetails] = useState<Campaign | null>(null);
+  const [isCampaignLoading, setIsCampaignLoading] = useState(false);
+  const [isCampaignInvalid, setIsCampaignInvalid] = useState(false);
 
-  const notesByCampaign = useMemo(() => {
-    const groupedByCampaign = new Map<string, Note[]>();
-    for (const note of notes) {
-      const campaignId = note.campaignId || 'uncategorized';
-      if (!groupedByCampaign.has(campaignId)) groupedByCampaign.set(campaignId, []);
-      groupedByCampaign.get(campaignId)?.push(note);
+  useEffect(() => {
+    if (!currentCampaignId) {
+      setCampaignDetails(null);
+      setIsCampaignInvalid(false);
+      setIsCampaignLoading(false);
+      return;
     }
 
-    return Array.from(groupedByCampaign.entries())
-      .map(([campaignId, campaignNotes]) => {
-        const campaign = campaigns.find((item) => item.id === campaignId);
-        return {
-          campaignId,
-          campaignName: campaign?.name || campaignNotes[0]?.campaignName || 'Uncategorized',
-          notes: campaignNotes,
-        };
-      })
-      .sort((a, b) => a.campaignName.localeCompare(b.campaignName));
-  }, [campaigns, notes]);
+    let cancelled = false;
+    setIsCampaignLoading(true);
+    setIsCampaignInvalid(false);
 
-  const visibleNotesByCampaign = useMemo(() => {
-    if (me?.role !== 'admin') return notesByCampaign;
-    if (!selectedCampaignId) return [];
-    return notesByCampaign.filter((group) => group.campaignId === selectedCampaignId);
-  }, [me?.role, notesByCampaign, selectedCampaignId]);
+    fetchCampaignById(currentCampaignId)
+      .then((campaign) => {
+        if (cancelled) return;
+        setCampaignDetails(campaign);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCampaignDetails(null);
+        setIsCampaignInvalid(true);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setIsCampaignLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCampaignId, fetchCampaignById]);
+
+  const campaignNotes = useMemo(() => {
+    if (!currentCampaignId) return [];
+    return notes.filter((note) => note.campaignId === currentCampaignId);
+  }, [currentCampaignId, notes]);
 
   const adminDayGroups = useMemo(() => {
     if (me?.role !== 'admin') return [];
 
-    const selectedGroup = visibleNotesByCampaign[0];
-    if (!selectedGroup) return [];
-
     const groupedByDay = new Map<string, Note[]>();
-    for (const note of [...selectedGroup.notes].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))) {
+    for (const note of [...campaignNotes].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))) {
       const day = getNoteDay(note);
       if (!groupedByDay.has(day)) groupedByDay.set(day, []);
       groupedByDay.get(day)?.push(note);
@@ -71,7 +81,7 @@ export function JournalView({ showInvalidCampaignPage, onGoToCampaigns, onGoToJo
     return Array.from(groupedByDay.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([day, dayNotes]) => ({ day, notes: dayNotes }));
-  }, [me?.role, visibleNotesByCampaign]);
+  }, [campaignNotes, me?.role]);
 
   const dayLabelByKey = useMemo(() => {
     const map = new Map<string, string>();
@@ -87,7 +97,7 @@ export function JournalView({ showInvalidCampaignPage, onGoToCampaigns, onGoToJo
     try {
       await createNote({
         contentHtml: editorHtml,
-        campaignId: selectedCampaignId,
+        campaignId: currentCampaignId,
         visibility: me?.role === 'admin' ? adminEntryVisibility : undefined,
       });
       setEditorHtml('');
@@ -98,27 +108,45 @@ export function JournalView({ showInvalidCampaignPage, onGoToCampaigns, onGoToJo
   }
 
   async function handleRenameDayGroup(day: string) {
-    if (!selectedCampaignId || me?.role !== 'admin') return;
+    if (!currentCampaignId || me?.role !== 'admin') return;
 
-    const key = `${selectedCampaignId}:${day}`;
+    const key = `${currentCampaignId}:${day}`;
     const existingTitle = dayLabelByKey.get(key) || '';
     const nextTitle = window.prompt('Set a title for this journal day group (leave empty to clear):', existingTitle);
     if (nextTitle === null) return;
 
     try {
-      await setDayGroupTitle({ campaignId: selectedCampaignId, day, title: nextTitle.trim() });
+      await setDayGroupTitle({ campaignId: currentCampaignId, day, title: nextTitle.trim() });
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to update day title');
     }
   }
 
-  if (showInvalidCampaignPage) {
+  if (!currentCampaignId) {
+    return (
+      <section className="card">
+        <h2>Select a Campaign</h2>
+        <p className="hint">Load a campaign from the Campaigns view to open its journal permalink.</p>
+        <button onClick={onGoToCampaigns} type="button">Open list</button>
+      </section>
+    );
+  }
+
+  if (isCampaignLoading && !campaignDetails) {
+    return (
+      <section className="card">
+        <h2>Loading campaign...</h2>
+      </section>
+    );
+  }
+
+  if (isCampaignInvalid) {
     return (
       <section className="card">
         <h2>Campaign Not Found</h2>
         <p className="error">The campaign ID in this URL is invalid or you do not have access to it.</p>
         <div className="inline-form">
-          <button onClick={onGoToCampaigns} type="button">Go to campaigns</button>
+          <button onClick={onGoToCampaigns} type="button">Open list</button>
           <button onClick={onGoToJournal} type="button">Open my journal</button>
         </div>
       </section>
@@ -141,22 +169,30 @@ export function JournalView({ showInvalidCampaignPage, onGoToCampaigns, onGoToJo
           ) : null}
 
           <ReactQuill className="editor" theme="snow" value={editorHtml} onChange={setEditorHtml} placeholder={JOURNAL_PLACEHOLDER} />
-          <button disabled={isLoading || !selectedCampaignId} type="submit">Save note</button>
+          <button disabled={isLoading || !currentCampaignId} type="submit">Save note</button>
         </form>
       </section>
 
       <section className="card">
         {me?.role === 'admin' ? (
           <AdminJournalChat
-            campaignName={visibleNotesByCampaign[0]?.campaignName || ''}
+            campaignName={campaignDetails?.name || ''}
             dayGroups={adminDayGroups}
             dayLabelByKey={dayLabelByKey}
             isLoading={isLoading}
-            selectedCampaignId={selectedCampaignId}
+            selectedCampaignId={currentCampaignId}
             onRenameDayGroup={handleRenameDayGroup}
           />
         ) : (
-          <UserJournalList groups={visibleNotesByCampaign} />
+          <UserJournalList
+            groups={[
+              {
+                campaignId: currentCampaignId,
+                campaignName: campaignDetails?.name || 'Campaign',
+                notes: campaignNotes,
+              },
+            ]}
+          />
         )}
       </section>
     </>

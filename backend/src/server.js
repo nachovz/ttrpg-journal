@@ -266,6 +266,24 @@ app.get('/api/campaigns', { preHandler: verifyAuthToken }, async (request) => {
     .sort((a, b) => String(a.name).localeCompare(String(b.name)));
 });
 
+app.get('/api/campaigns/:id', { preHandler: verifyAuthToken }, async (request, reply) => {
+  const campaignId = String(request.params?.id || '').trim();
+  if (!campaignId) {
+    return reply.code(400).send({ error: 'campaign id is required' });
+  }
+
+  const campaign = await getCampaignById(campaignId);
+  if (!campaign) {
+    return reply.code(404).send({ error: 'Campaign not found' });
+  }
+
+  if (!ensureCampaignMember(campaign, request.user.uid)) {
+    return reply.code(403).send({ error: 'You are not a member of this campaign' });
+  }
+
+  return campaignToResponse(campaign);
+});
+
 app.post('/api/campaigns', { preHandler: verifyAuthToken }, async (request, reply) => {
   if (request.user.role !== 'admin') {
     return reply.code(403).send({ error: 'Only admins can create campaigns' });

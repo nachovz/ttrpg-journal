@@ -52,6 +52,11 @@ export async function createCampaign(token: string, campaignName: string) {
   });
 }
 
+export async function fetchCampaignById(token: string, campaignId: string): Promise<Campaign> {
+  const campaignData = await apiRequest(`/api/campaigns/${encodeURIComponent(campaignId)}`, token);
+  return campaignData as Campaign;
+}
+
 export async function deleteCampaign(token: string, campaignId: string) {
   await apiRequest(`/api/campaigns/${campaignId}`, token, {
     method: 'DELETE',

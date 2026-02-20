@@ -19,7 +19,6 @@ export interface SessionContextValue {
   notes: Note[];
   campaigns: Campaign[];
   journalDayLabels: JournalDayLabel[];
-  selectedCampaignId: string;
   profileForm: ProfileFormState;
   joinCodeInput: string;
   campaignNameInput: string;
@@ -28,7 +27,6 @@ export interface SessionContextValue {
   theme: 'light' | 'dark';
   setAuthMode: (mode: 'login' | 'register') => void;
   setAuthForm: Dispatch<SetStateAction<AuthFormState>>;
-  setSelectedCampaignId: Dispatch<SetStateAction<string>>;
   setProfileForm: Dispatch<SetStateAction<ProfileFormState>>;
   setJoinCodeInput: Dispatch<SetStateAction<string>>;
   setCampaignNameInput: Dispatch<SetStateAction<string>>;
@@ -39,6 +37,7 @@ export interface SessionContextValue {
   joinCampaign: (event: FormEvent) => Promise<void>;
   createCampaign: (event: FormEvent) => Promise<void>;
   deleteCampaign: (campaign: Campaign) => Promise<void>;
+  fetchCampaignById: (campaignId: string) => Promise<Campaign>;
   createNote: (params: { contentHtml: string; campaignId: string; visibility?: NoteVisibility }) => Promise<void>;
   setDayGroupTitle: (params: { campaignId: string; day: string; title: string }) => Promise<void>;
   logout: () => Promise<void>;
