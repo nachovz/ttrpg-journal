@@ -160,6 +160,14 @@ function isAdminNote(note = {}) {
   return isAdminEmail(note.userEmail);
 }
 
+function resolveNoteVisibility(note = {}) {
+  const explicitVisibility = String(note.visibility || '').toLowerCase();
+  if (explicitVisibility === 'public' || explicitVisibility === 'private') {
+    return explicitVisibility;
+  }
+  return isAdminNote(note) ? 'private' : 'public';
+}
+
 function campaignToResponse(campaign) {
   return {
     id: campaign.id,
@@ -451,10 +459,8 @@ app.post('/api/notes', { preHandler: verifyAuthToken }, async (request, reply) =
   const userData = userDoc.exists ? userDoc.data() : {};
 
   const now = new Date();
-  const visibility =
-    request.user.role === 'admin'
-      ? String(requestedVisibility || 'private').toLowerCase()
-      : 'public';
+  const visibilityDefault = request.user.role === 'admin' ? 'private' : 'public';
+  const visibility = String(requestedVisibility || visibilityDefault).toLowerCase();
   if (!['public', 'private'].includes(visibility)) {
     return reply.code(400).send({ error: 'visibility must be public or private' });
   }
@@ -503,8 +509,10 @@ app.get('/api/notes', { preHandler: verifyAuthToken }, async (request) => {
   return noteSnapshots
     .flatMap((snapshot) => snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })))
     .filter((note) => {
-      if (!isAdminNote(note)) return true;
-      return String(note.visibility || 'private').toLowerCase() === 'public';
+      if (note.userId === request.user.uid) {
+        return true;
+      }
+      return resolveNoteVisibility(note) === 'public';
     })
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 });

@@ -30,10 +30,14 @@ export function JournalView({}: JournalViewProps) {
   const currentCampaignId = (journalMatch?.params?.campaignId || '').trim();
 
   const [editorHtml, setEditorHtml] = useState('');
-  const [adminEntryVisibility, setAdminEntryVisibility] = useState<'public' | 'private'>('private');
+  const [entryVisibility, setEntryVisibility] = useState<'public' | 'private'>('public');
   const [campaignDetails, setCampaignDetails] = useState<Campaign | null>(null);
   const [isCampaignLoading, setIsCampaignLoading] = useState(false);
   const [isCampaignInvalid, setIsCampaignInvalid] = useState(false);
+
+  useEffect(() => {
+    setEntryVisibility(me?.role === 'admin' ? 'private' : 'public');
+  }, [me?.role]);
 
   useEffect(() => {
     if (!currentCampaignId) {
@@ -102,10 +106,10 @@ export function JournalView({}: JournalViewProps) {
       await createNote({
         contentHtml: editorHtml,
         campaignId: currentCampaignId,
-        visibility: me?.role === 'admin' ? adminEntryVisibility : undefined,
+        visibility: entryVisibility,
       });
       setEditorHtml('');
-      setAdminEntryVisibility('private');
+      setEntryVisibility(me?.role === 'admin' ? 'private' : 'public');
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to save note');
     }
@@ -162,15 +166,20 @@ export function JournalView({}: JournalViewProps) {
       <section className="card">
         <h2>New Entry</h2>
         <form onSubmit={handleCreateNote} className="form">
-          {me?.role === 'admin' ? (
-            <label>
-              Visibility
-              <select value={adminEntryVisibility} onChange={(event) => setAdminEntryVisibility(event.target.value as 'public' | 'private')}>
-                <option value="private">Private (admin only)</option>
-                <option value="public">Public (all campaign members)</option>
-              </select>
-            </label>
-          ) : null}
+          <label className="ios-switch">
+            <input
+              className="ios-switch-input"
+              type="checkbox"
+              role="switch"
+              checked={entryVisibility === 'private'}
+              onChange={(event) => setEntryVisibility(event.target.checked ? 'private' : 'public')}
+            />
+            <span className="ios-switch-label">
+              {entryVisibility === 'private'
+                ? 'Private entry'
+                : 'Public entry'}
+            </span>
+          </label>
 
           <ReactQuill className="editor" theme="snow" value={editorHtml} onChange={setEditorHtml} placeholder={JOURNAL_PLACEHOLDER} />
           <button disabled={isLoading || !currentCampaignId} type="submit">Save note</button>

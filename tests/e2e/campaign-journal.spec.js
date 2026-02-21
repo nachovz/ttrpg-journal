@@ -58,7 +58,9 @@ test.describe.serial('Campaign journaling flow', () => {
   const campaignName = `E2E Campaign ${suffix}`;
   const userEmail = `e2e.user.${suffix}@example.com`;
   const userPassword = 'StrongPass123!';
-  const noteText = `E2E note ${suffix}`;
+  const secondUserEmail = `e2e.user.second.${suffix}@example.com`;
+  const secondUserPassword = 'StrongPass123!';
+  const userPrivateNoteText = `E2E user private note ${suffix}`;
   const adminPrivateNoteText = `E2E admin private note ${suffix}`;
   const adminPublicNoteText = `E2E admin public note ${suffix}`;
 
@@ -84,9 +86,10 @@ test.describe.serial('Campaign journaling flow', () => {
     await campaignCard.getByRole('button', { name: 'Load campaign journal' }).click();
 
     const adminEditor = page.locator('.editor .ql-editor').first();
+    const visibilitySwitch = page.getByRole('switch').first();
     await adminEditor.click();
     await adminEditor.fill(adminPrivateNoteText);
-    await page.getByLabel('Visibility').selectOption('private');
+    await expect(visibilitySwitch).toBeChecked();
     await page
       .locator('section.card', { has: page.getByRole('heading', { name: 'New Entry' }) })
       .locator('form')
@@ -95,7 +98,7 @@ test.describe.serial('Campaign journaling flow', () => {
 
     await adminEditor.click();
     await adminEditor.fill(adminPublicNoteText);
-    await page.getByLabel('Visibility').selectOption('public');
+    await visibilitySwitch.uncheck();
     await page
       .locator('section.card', { has: page.getByRole('heading', { name: 'New Entry' }) })
       .locator('form')
@@ -105,7 +108,7 @@ test.describe.serial('Campaign journaling flow', () => {
     await logout(page);
   });
 
-  test('new user registers, joins campaign and creates campaign note', async ({ page }) => {
+  test('new user registers, joins campaign and creates private note', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Register' }).click();
     await page.getByLabel('Email').fill(userEmail);
@@ -130,8 +133,10 @@ test.describe.serial('Campaign journaling flow', () => {
     await expect(page.locator('.note', { hasText: adminPrivateNoteText })).toHaveCount(0);
 
     const editor = page.locator('.editor .ql-editor').first();
+    const visibilitySwitch = page.getByRole('switch').first();
     await editor.click();
-    await editor.fill(noteText);
+    await editor.fill(userPrivateNoteText);
+    await visibilitySwitch.check();
 
     await page
       .locator('section.card', { has: page.getByRole('heading', { name: 'New Entry' }) })
@@ -139,7 +144,31 @@ test.describe.serial('Campaign journaling flow', () => {
       .evaluate((form) => form.requestSubmit());
 
     await expect(page.getByRole('heading', { name: campaignName, level: 3 })).toBeVisible();
-    await expect(page.locator('.note', { hasText: noteText }).first()).toBeVisible();
+    await expect(page.locator('.note', { hasText: userPrivateNoteText }).first()).toBeVisible();
+
+    await logout(page);
+  });
+
+  test('another user cannot see private entries from first user', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Register' }).click();
+    await page.getByLabel('Email').fill(secondUserEmail);
+    await page.getByLabel('Password').fill(secondUserPassword);
+    await page.getByRole('button', { name: 'Create account' }).click();
+
+    await page.getByRole('button', { name: 'Campaigns' }).click();
+    await page.getByPlaceholder('Join code').fill(joinCode);
+    await page.getByRole('button', { name: 'Join' }).click();
+
+    await page
+      .locator('.campaign-item', { hasText: campaignName })
+      .first()
+      .getByRole('button', { name: 'Load campaign journal' })
+      .click();
+
+    await expect(page.locator('.note', { hasText: adminPublicNoteText }).first()).toBeVisible();
+    await expect(page.locator('.note', { hasText: adminPrivateNoteText })).toHaveCount(0);
+    await expect(page.locator('.note', { hasText: userPrivateNoteText })).toHaveCount(0);
 
     await logout(page);
   });
@@ -155,8 +184,8 @@ test.describe.serial('Campaign journaling flow', () => {
       .click();
     await expect(page.getByRole('heading', { name: campaignName, level: 3 })).toBeVisible();
 
-    const noteCard = page.locator('.note', { hasText: noteText }).first();
-    await expect(noteCard).toBeVisible();
+    await expect(page.locator('.note', { hasText: userPrivateNoteText }).first()).toBeVisible();
+    const noteCard = page.locator('.note', { hasText: adminPublicNoteText }).first();
     await expect(noteCard.getByRole('button', { name: 'Edit entry' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0);
   });

@@ -245,6 +245,66 @@
     @apply flex flex-wrap items-center gap-2;
   }
 
+  .ios-switch {
+    @apply inline-flex items-center gap-3 text-sm font-semibold text-stone-800;
+  }
+
+  .dark .ios-switch {
+    @apply text-zinc-100;
+  }
+
+  .ios-switch-input {
+    appearance: none;
+    width: 3rem;
+    height: 1.75rem;
+    @apply relative m-0 inline-block flex-shrink-0 cursor-pointer rounded-full border border-amber-700/40 bg-amber-100 align-middle transition-colors duration-200 ease-out;
+  }
+
+  .dark .ios-switch-input {
+    @apply border-amber-500/35 bg-zinc-800;
+  }
+
+  .ios-switch-input::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    transition: transform 0.2s ease-out;
+  }
+
+  .dark .ios-switch-input::before {
+    background: #fafafa;
+  }
+
+  .ios-switch-input:checked {
+    @apply border-red-700 bg-red-700;
+  }
+
+  .dark .ios-switch-input:checked {
+    @apply border-amber-400 bg-amber-400;
+  }
+
+  .ios-switch-input:checked::before {
+    transform: translateX(20px);
+  }
+
+  .ios-switch-input:focus-visible {
+    box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.25);
+  }
+
+  .dark .ios-switch-input:focus-visible {
+    box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.28);
+  }
+
+  .ios-switch-label {
+    @apply leading-none;
+  }
+
   .campaign-list {
     @apply grid gap-2;
   }
