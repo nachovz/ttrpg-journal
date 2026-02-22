@@ -52,7 +52,7 @@
   }
 
   .app-shell {
-    @apply min-h-screen max-w-none gap-2 p-0 md:p-0;
+    @apply min-h-screen max-w-none content-start gap-2 p-0 md:p-0;
   }
 
   .app-content {
@@ -274,7 +274,7 @@
   }
 
   .note-group h3 {
-    @apply mb-1 text-base font-semibold text-red-800;
+    @apply mt-0 mb-1 text-base font-semibold text-red-800;
   }
 
   .dark .note-group h3 {
@@ -382,18 +382,50 @@
   }
 
   .journal-chat-card {
-    @apply grid gap-2 p-0;
+    @apply grid gap-0 p-0;
     height: calc(100vh - 8rem);
     min-height: 560px;
   }
 
   .journal-chat-messages {
-    @apply overflow-y-auto px-4 pt-3 pb-2;
+    @apply overflow-y-auto px-3 pt-0.5 pb-1.5;
     min-height: 0;
   }
 
+  .journal-chat-messages > h3 {
+    @apply m-0 mb-0.5 text-base font-semibold text-red-800;
+  }
+
+  .dark .journal-chat-messages > h3 {
+    @apply text-amber-300;
+  }
+
+  .journal-chat-messages .notes-group-list {
+    @apply gap-2;
+  }
+
+  .journal-chat-messages .note-group h3 {
+    @apply mb-0.5;
+  }
+
+  .journal-chat-messages .chat-day-list {
+    @apply gap-2;
+  }
+
+  .journal-chat-messages .chat-day-group {
+    @apply gap-1;
+  }
+
+  .journal-chat-messages .chat-day-header {
+    @apply gap-1;
+  }
+
+  .journal-chat-messages .chat-thread {
+    @apply gap-1.5;
+  }
+
   .journal-chat-composer {
-    @apply border-t border-amber-900/20 bg-white/95 px-3 py-2.5;
+    @apply border-t border-amber-900/20 bg-white/95 px-3 py-2;
   }
 
   .dark .journal-chat-composer {
