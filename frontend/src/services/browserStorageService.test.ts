@@ -8,35 +8,43 @@ describe('browserStorageService', () => {
   });
 
   it('stores and reads string values', () => {
-    browserStorageService.setString('app.key', 'value-1');
+    browserStorageService.setString('bards_journal.selected_campaign_id', 'campaign_icewind-dale_2026');
 
-    expect(browserStorageService.getString('app.key')).toBe('value-1');
+    expect(browserStorageService.getString('bards_journal.selected_campaign_id')).toBe('campaign_icewind-dale_2026');
   });
 
   it('returns null for blank keys and missing values', () => {
     expect(browserStorageService.getString('')).toBeNull();
-    expect(browserStorageService.getString('missing.key')).toBeNull();
+    expect(browserStorageService.getString('bards_journal.missing_preference')).toBeNull();
   });
 
   it('removes values', () => {
-    browserStorageService.setString('remove.key', 'value');
-    browserStorageService.remove('remove.key');
+    browserStorageService.setString('bards_journal.last_open_route', '/journal/campaign_shadowfell_01');
+    browserStorageService.remove('bards_journal.last_open_route');
 
-    expect(browserStorageService.getString('remove.key')).toBeNull();
+    expect(browserStorageService.getString('bards_journal.last_open_route')).toBeNull();
   });
 
   it('stores and reads json values', () => {
-    const value = { campaignId: 'abc123', nested: { enabled: true } };
+    const value = {
+      userId: 'user_ignacio_01',
+      characterName: 'Thalia Moonwhisper',
+      uiPreferences: {
+        theme: 'dark',
+        compactChat: true,
+      },
+      lastViewedCampaignIds: ['campaign_icewind-dale_2026', 'campaign_waterdeep_02'],
+    };
 
-    browserStorageService.setJson('json.key', value);
+    browserStorageService.setJson('bards_journal.user_preferences', value);
 
-    expect(browserStorageService.getJson<typeof value>('json.key')).toEqual(value);
+    expect(browserStorageService.getJson<typeof value>('bards_journal.user_preferences')).toEqual(value);
   });
 
   it('returns null when json is invalid', () => {
-    window.localStorage.setItem('bad.json', '{not-valid-json');
+    window.localStorage.setItem('bards_journal.corrupted_cache', '{not-valid-json');
 
-    expect(browserStorageService.getJson('bad.json')).toBeNull();
+    expect(browserStorageService.getJson('bards_journal.corrupted_cache')).toBeNull();
   });
 
   it('swallows localStorage get failures', () => {
@@ -44,7 +52,7 @@ describe('browserStorageService', () => {
       throw new Error('get failed');
     });
 
-    expect(browserStorageService.getString('app.key')).toBeNull();
+    expect(browserStorageService.getString('bards_journal.selected_campaign_id')).toBeNull();
   });
 
   it('swallows localStorage set failures', () => {
@@ -52,8 +60,8 @@ describe('browserStorageService', () => {
       throw new Error('set failed');
     });
 
-    expect(() => browserStorageService.setString('app.key', 'value')).not.toThrow();
-    expect(setItemSpy).toHaveBeenCalledWith('app.key', 'value');
+    expect(() => browserStorageService.setString('bards_journal.selected_campaign_id', 'campaign_barovia_03')).not.toThrow();
+    expect(setItemSpy).toHaveBeenCalledWith('bards_journal.selected_campaign_id', 'campaign_barovia_03');
   });
 
   it('swallows localStorage remove failures', () => {
@@ -61,7 +69,7 @@ describe('browserStorageService', () => {
       throw new Error('remove failed');
     });
 
-    expect(() => browserStorageService.remove('app.key')).not.toThrow();
-    expect(removeItemSpy).toHaveBeenCalledWith('app.key');
+    expect(() => browserStorageService.remove('bards_journal.selected_campaign_id')).not.toThrow();
+    expect(removeItemSpy).toHaveBeenCalledWith('bards_journal.selected_campaign_id');
   });
 });

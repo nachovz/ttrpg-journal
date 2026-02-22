@@ -55,6 +55,41 @@ async function register(page, email, password) {
   await expect(page.locator('.user-menu > summary')).toBeVisible();
 }
 
+async function saveProfile(page, { username, characterName }) {
+  await expect(page.locator('.user-menu > summary')).toBeVisible();
+  await page.goto('/profile');
+  await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible();
+  await page.getByLabel('Username').fill(username);
+  await page.getByLabel('Character Name').fill(characterName);
+  await page.getByRole('button', { name: 'Save profile' }).click();
+}
+
+async function ensureUserAccount(page, { email, password, username, characterName }) {
+  await page.goto('/');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
+  await page.locator('form').getByRole('button', { name: 'Login' }).click();
+
+  const userMenu = page.locator('.user-menu > summary');
+  if (await userMenu.isVisible().catch(() => false)) {
+    await saveProfile(page, { username, characterName });
+    return;
+  }
+
+  await page.goto('/');
+  await expect(page.getByLabel('Email')).toBeVisible();
+  await page.getByRole('button', { name: 'Register' }).click();
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  try {
+    await expect(userMenu).toBeVisible({ timeout: 3000 });
+  } catch {
+    await login(page, email, password);
+  }
+  await saveProfile(page, { username, characterName });
+}
+
 test.describe.serial('Multi-user campaign batch journaling', () => {
   test.skip(
     !adminEmail || !adminPassword,
@@ -62,22 +97,28 @@ test.describe.serial('Multi-user campaign batch journaling', () => {
   );
 
   const suffix = Date.now().toString(36);
-  const campaignName = `E2E Batch Campaign ${suffix}`;
+  const campaignName = `Siege of Duskhollow - Shared Journal ${suffix}`;
   const users = [
     {
-      email: `e2e.batch.one.${suffix}@example.com`,
+      email: 'kael.nightbrook.playtest@example.com',
       password: 'StrongPass123!',
-      note: `Batch note one ${suffix}`,
+      username: 'Kael Nightbrook',
+      characterName: 'Kael Nightbrook',
+      note: `Spotted ballista crews on the eastern wall and marked a hidden postern gate behind the ivy-covered shrine. (${suffix})`,
     },
     {
-      email: `e2e.batch.two.${suffix}@example.com`,
+      email: 'seraphina.valewind.playtest@example.com',
       password: 'StrongPass123!',
-      note: `Batch note two ${suffix}`,
+      username: 'Seraphina Valewind',
+      characterName: 'Seraphina Valewind',
+      note: `High Priest Orlen agreed to bless the vials of holy water if we return the reliquary before dawn. (${suffix})`,
     },
     {
-      email: `e2e.batch.three.${suffix}@example.com`,
+      email: `torvin.ironroot+${suffix}@example.com`,
       password: 'StrongPass123!',
-      note: `Batch note three ${suffix}`,
+      username: 'Torvin Ironroot',
+      characterName: 'Torvin Ironroot',
+      note: `Reinforced the south barricade with wagon axles and counted enough oil for one more wave. (${suffix})`,
     },
   ];
 
@@ -96,7 +137,12 @@ test.describe.serial('Multi-user campaign batch journaling', () => {
     await logout(page);
 
     for (const user of users) {
-      await register(page, user.email, user.password);
+      await ensureUserAccount(page, {
+        email: user.email,
+        password: user.password,
+        username: user.username,
+        characterName: user.characterName,
+      });
       await page.getByRole('button', { name: 'Campaigns' }).click();
       await page.getByPlaceholder('Join code').fill(joinCode);
       await page.getByRole('button', { name: 'Join' }).click();
@@ -130,7 +176,7 @@ test.describe.serial('Multi-user campaign batch journaling', () => {
 
     for (const user of users) {
       await expect(page.locator('.note', { hasText: user.note }).first()).toBeVisible();
-      await expect(page.locator('.note', { hasText: user.email }).first()).toBeVisible();
+      await expect(page.locator('.note', { hasText: user.characterName }).first()).toBeVisible();
     }
   });
 });

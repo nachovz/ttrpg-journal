@@ -48,6 +48,41 @@ async function logout(page) {
   await expect(page.getByLabel('Password')).toBeVisible();
 }
 
+async function saveProfile(page, { username, characterName }) {
+  await expect(page.locator('.user-menu > summary')).toBeVisible();
+  await page.goto('/profile');
+  await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible();
+  await page.getByLabel('Username').fill(username);
+  await page.getByLabel('Character Name').fill(characterName);
+  await page.getByRole('button', { name: 'Save profile' }).click();
+}
+
+async function ensureUserAccount(page, { email, password, username, characterName }) {
+  await page.goto('/');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
+  await page.locator('form').getByRole('button', { name: 'Login' }).click();
+
+  const userMenu = page.locator('.user-menu > summary');
+  if (await userMenu.isVisible().catch(() => false)) {
+    await saveProfile(page, { username, characterName });
+    return;
+  }
+
+  await page.goto('/');
+  await expect(page.getByLabel('Email')).toBeVisible();
+  await page.getByRole('button', { name: 'Register' }).click();
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  try {
+    await expect(userMenu).toBeVisible({ timeout: 3000 });
+  } catch {
+    await login(page, email, password);
+  }
+  await saveProfile(page, { username, characterName });
+}
+
 test.describe.serial('Campaign journaling flow', () => {
   test.skip(
     !adminEmail || !adminPassword,
@@ -55,14 +90,21 @@ test.describe.serial('Campaign journaling flow', () => {
   );
 
   const suffix = Date.now().toString(36);
-  const campaignName = `E2E Campaign ${suffix}`;
-  const userEmail = `e2e.user.${suffix}@example.com`;
+  const campaignName = `The Shattered Crown - Session Log ${suffix}`;
+  const userEmail = 'lina.stormrider.playtest@example.com';
   const userPassword = 'StrongPass123!';
-  const secondUserEmail = `e2e.user.second.${suffix}@example.com`;
+  const userUsername = 'Lina Stormrider';
+  const userCharacterName = 'Lina Stormrider';
+  const secondUserEmail = 'borin.emberforge.playtest@example.com';
   const secondUserPassword = 'StrongPass123!';
-  const userPrivateNoteText = `E2E user private note ${suffix}`;
-  const adminPrivateNoteText = `E2E admin private note ${suffix}`;
-  const adminPublicNoteText = `E2E admin public note ${suffix}`;
+  const secondUserUsername = 'Borin Emberforge';
+  const secondUserCharacterName = 'Borin Emberforge';
+  const userPrivateNoteText =
+    `Private field notes (${suffix}): I suspect the innkeeper in Daggerford is a Zhentarim informant after the midnight sending stone exchange.`;
+  const adminPrivateNoteText =
+    `DM private note (${suffix}): The "Silver Chalice" map fragment is hidden beneath the chapel altar and tied to Sister Meriel's confession scene.`;
+  const adminPublicNoteText =
+    `Session recap (${suffix}): The party negotiated safe passage through the Blackfen Marsh, defeated two troll scouts, and recovered the first shard of the Shattered Crown.`;
 
   let joinCode = '';
 
@@ -106,13 +148,12 @@ test.describe.serial('Campaign journaling flow', () => {
   });
 
   test('new user registers, joins campaign and creates private note', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: 'Register' }).click();
-    await page.getByLabel('Email').fill(userEmail);
-    await page.getByLabel('Password').fill(userPassword);
-    await page.getByRole('button', { name: 'Create account' }).click();
-
-    await expect(page.locator('.user-menu > summary')).toBeVisible();
+    await ensureUserAccount(page, {
+      email: userEmail,
+      password: userPassword,
+      username: userUsername,
+      characterName: userCharacterName,
+    });
 
     await page.getByRole('button', { name: 'Campaigns' }).click();
     await page.getByPlaceholder('Join code').fill(joinCode);
@@ -127,6 +168,9 @@ test.describe.serial('Campaign journaling flow', () => {
       .click();
 
     await expect(page.locator('.note', { hasText: adminPublicNoteText }).first()).toBeVisible();
+    await expect(
+      page.locator('.note', { hasText: adminPublicNoteText }).first().getByText(/^DM$/).first()
+    ).toBeVisible();
     await expect(page.locator('.note', { hasText: adminPrivateNoteText })).toHaveCount(0);
 
     const editor = page.locator('.editor .ql-editor').first();
@@ -146,11 +190,12 @@ test.describe.serial('Campaign journaling flow', () => {
   });
 
   test('another user cannot see private entries from first user', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('button', { name: 'Register' }).click();
-    await page.getByLabel('Email').fill(secondUserEmail);
-    await page.getByLabel('Password').fill(secondUserPassword);
-    await page.getByRole('button', { name: 'Create account' }).click();
+    await ensureUserAccount(page, {
+      email: secondUserEmail,
+      password: secondUserPassword,
+      username: secondUserUsername,
+      characterName: secondUserCharacterName,
+    });
 
     await page.getByRole('button', { name: 'Campaigns' }).click();
     await page.getByPlaceholder('Join code').fill(joinCode);
@@ -182,6 +227,7 @@ test.describe.serial('Campaign journaling flow', () => {
 
     await expect(page.locator('.note', { hasText: userPrivateNoteText }).first()).toBeVisible();
     const noteCard = page.locator('.note', { hasText: adminPublicNoteText }).first();
+    await expect(noteCard.getByText(/^DM$/).first()).toBeVisible();
     await expect(noteCard.getByRole('button', { name: 'Edit entry' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0);
   });

@@ -43,6 +43,34 @@ npm run dev
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:4000`
 
+## 4) Local Mock Mode (No Firebase Quota Usage)
+Use this mode for local development and manual testing without calling Firebase.
+
+```bash
+npm install
+npm run dev:mock
+```
+
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:4000`
+- Local mock data file: `backend/.local-firebase-data.json`
+
+### Fixed Playtest Users (local mock mode)
+These users are intentionally stable across test runs so you can reuse them manually:
+
+- `lina.stormrider.playtest@example.com` / `StrongPass123!`
+  - Character name: `Lina Stormrider`
+- `borin.emberforge.playtest@example.com` / `StrongPass123!`
+  - Character name: `Borin Emberforge`
+- `kael.nightbrook.playtest@example.com` / `StrongPass123!`
+  - Character name: `Kael Nightbrook`
+- `seraphina.valewind.playtest@example.com` / `StrongPass123!`
+  - Character name: `Seraphina Valewind`
+
+Notes:
+- The Playwright mock-mode tests will create/login these accounts automatically.
+- If you want a clean local state, stop the server and delete `backend/.local-firebase-data.json`.
+
 ## E2E Tests (Playwright)
 Install browsers once:
 
@@ -62,6 +90,10 @@ Run tests:
 ```bash
 npm run test:e2e
 ```
+
+Default test policy in local development:
+- Run tests against local mock mode unless you explicitly want to validate against Firebase.
+- Prefer small batches (for example, a single Playwright spec) during iteration.
 
 ## API Summary
 - `GET /health`
