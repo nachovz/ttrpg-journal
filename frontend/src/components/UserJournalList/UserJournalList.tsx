@@ -11,6 +11,34 @@ function formatDayLabel(value: string) {
   });
 }
 
+function formatEntryDateTime(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function getNoteDisplayName(note: {
+  userRole?: string;
+  username?: string;
+  userEmail?: string;
+}) {
+  if (note.userRole === 'admin') return 'DM';
+  return note.username || note.userEmail || 'Unknown';
+}
+
+function getNoteCharacterLabel(note: {
+  userRole?: string;
+  characterName?: string;
+}) {
+  if (note.userRole === 'admin') return '';
+  return note.characterName || '';
+}
+
 export function UserJournalList({ dayLabelByKey, groups }: UserJournalListProps) {
   return (
     <>
@@ -42,17 +70,18 @@ export function UserJournalList({ dayLabelByKey, groups }: UserJournalListProps)
                         <article className="note" key={note.id}>
                           <div className="meta">
                             {note.profileImageUrl ? (
-                              <img className="note-avatar" alt={`${note.username || note.userEmail} avatar`} src={note.profileImageUrl} />
+                              <img className="note-avatar" alt={`${getNoteDisplayName(note)} avatar`} src={note.profileImageUrl} />
                             ) : null}
-                            <strong>{note.username || note.userEmail}</strong>
-                            {note.characterName ? <span>Character: {note.characterName}</span> : null}
+                            <strong>{getNoteDisplayName(note)}</strong>
+                            {getNoteCharacterLabel(note) ? <span>Character: {getNoteCharacterLabel(note)}</span> : null}
                             {note.dndBeyondUrl ? (
                               <a href={note.dndBeyondUrl} target="_blank" rel="noreferrer">
                                 Character sheet
                               </a>
                             ) : null}
-                            <span>Created at: {new Date(note.createdAt).toLocaleString()}</span>
-                            {note.updatedAt ? <span>Updated: {new Date(note.updatedAt).toLocaleString()}</span> : null}
+                            <span className="note-meta-time">
+                              {formatEntryDateTime(note.updatedAt || note.createdAt)}
+                            </span>
                           </div>
                           <div dangerouslySetInnerHTML={{ __html: note.contentHtml }} />
                         </article>

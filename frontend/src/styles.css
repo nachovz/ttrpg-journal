@@ -273,6 +273,14 @@
     @apply text-zinc-300;
   }
 
+  .note-meta-time {
+    @apply ml-auto whitespace-nowrap text-[10px] text-right text-stone-500;
+  }
+
+  .dark .note-meta-time {
+    @apply text-zinc-400;
+  }
+
   .note-avatar {
     @apply h-6 w-6 rounded-full border border-amber-700/40 object-cover;
   }
