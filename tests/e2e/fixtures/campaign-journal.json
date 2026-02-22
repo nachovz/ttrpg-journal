@@ -1,0 +1,22 @@
+{
+  "campaignName": "The Shattered Crown - Session Log {{suffix}}",
+  "users": {
+    "primary": {
+      "email": "lina.stormrider.playtest@example.com",
+      "password": "StrongPass123!",
+      "username": "Lina Stormrider",
+      "characterName": "Lina Stormrider"
+    },
+    "secondary": {
+      "email": "borin.emberforge.playtest@example.com",
+      "password": "StrongPass123!",
+      "username": "Borin Emberforge",
+      "characterName": "Borin Emberforge"
+    }
+  },
+  "notes": {
+    "userPrivate": "Private field notes ({{suffix}}): I suspect the innkeeper in Daggerford is a Zhentarim informant after the midnight sending stone exchange.",
+    "adminPrivate": "DM private note ({{suffix}}): The \"Silver Chalice\" map fragment is hidden beneath the chapel altar and tied to Sister Meriel's confession scene.",
+    "adminPublic": "Session recap ({{suffix}}): The party negotiated safe passage through the Blackfen Marsh, defeated two troll scouts, and recovered the first shard of the Shattered Crown."
+  }
+}

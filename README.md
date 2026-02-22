@@ -13,6 +13,18 @@ A multi-user journaling app with:
 - Backend: Fastify + Firebase Admin SDK
 - Data: Cloud Firestore (`users`, `notes`)
 
+## Project Decisions (short)
+- Frontend: `React + TypeScript`
+- Backend: `Fastify` (project started in JS, migrating toward TypeScript)
+- DB/Auth: `Firebase` with local mock mode for development (`npm run dev:mock`)
+- CSS: `Tailwind CSS`
+- Unit tests: `Jest` + `@testing-library/react`
+- UI/E2E tests: `Playwright`
+- Playwright test fixtures: JSON files under `tests/e2e/fixtures/`
+- Shared Playwright helpers: `tests/e2e/support/`
+- Commit style: `Conventional Commits`
+- Default local workflow: run tests in mock mode, small batches first
+
 ## Project Structure
 - `frontend/`: React app
 - `backend/`: Fastify API
