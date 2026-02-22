@@ -2,36 +2,41 @@ import type { SessionSkeletonProps } from './types';
 
 export function SessionSkeleton({ title = "Bard's Journal" }: SessionSkeletonProps) {
   return (
-    <main className="container" aria-busy="true">
-      <section className="card header-card">
-        <div className="header-user">
-          <div className="header-avatar skeleton skeleton-circle" aria-hidden="true" />
-          <div className="header-info">
-            <div className="skeleton skeleton-title" aria-hidden="true" />
-            <div className="skeleton skeleton-line" aria-hidden="true" />
-            <div className="skeleton skeleton-line short" aria-hidden="true" />
+    <main className="container app-shell" aria-busy="true">
+      <header className="top-nav" aria-label={`${title} loading navigation`}>
+        <div className="skeleton skeleton-nav-brand" aria-hidden="true" />
+        <div className="skeleton skeleton-nav-tabs" aria-hidden="true" />
+        <div className="skeleton-nav-actions" aria-hidden="true">
+          <div className="skeleton skeleton-nav-button" />
+          <div className="skeleton skeleton-nav-icon" />
+          <div className="skeleton skeleton-nav-user" />
+        </div>
+      </header>
+
+      <div className="app-content">
+        <section className="card journal-chat-card">
+          <div className="journal-chat-messages">
+            <div className="skeleton skeleton-heading compact" aria-hidden="true" />
+            <div className="skeleton-stack" aria-hidden="true">
+              <div className="skeleton skeleton-day-label" />
+              <div className="skeleton skeleton-note compact" />
+              <div className="skeleton skeleton-note compact" />
+              <div className="skeleton skeleton-day-label" />
+              <div className="skeleton skeleton-note compact" />
+              <div className="skeleton skeleton-note compact" />
+            </div>
           </div>
-        </div>
-        <div className="header-actions">
-          <div className="skeleton skeleton-tabs" aria-hidden="true" />
-        </div>
-      </section>
 
-      <section className="card">
-        <h1>{title}</h1>
-        <div className="skeleton skeleton-heading" aria-hidden="true" />
-        <div className="skeleton skeleton-editor" aria-hidden="true" />
-        <div className="skeleton skeleton-button" aria-hidden="true" />
-      </section>
-
-      <section className="card">
-        <div className="skeleton skeleton-heading" aria-hidden="true" />
-        <div className="skeleton-stack" aria-hidden="true">
-          <div className="skeleton skeleton-note" />
-          <div className="skeleton skeleton-note" />
-          <div className="skeleton skeleton-note" />
-        </div>
-      </section>
+          <div className="journal-chat-composer" aria-label={`${title} loading composer`}>
+            <div className="skeleton-composer-row" aria-hidden="true">
+              <div className="skeleton skeleton-toggle" />
+              <div className="skeleton skeleton-line short" />
+            </div>
+            <div className="skeleton skeleton-editor compact" aria-hidden="true" />
+            <div className="skeleton skeleton-button" aria-hidden="true" />
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

@@ -73,7 +73,8 @@ test.describe('authenticated screens pass axe checks', () => {
     await page.getByRole('button', { name: 'Campaigns' }).click();
     await runAxe(page, 'campaigns view');
 
-    await page.getByRole('button', { name: 'Profile' }).click();
+    await page.locator('.user-menu > summary').click();
+    await page.locator('.user-menu-panel').getByRole('button', { name: 'Profile' }).click();
     await runAxe(page, 'profile view');
   });
 });

@@ -38,7 +38,7 @@ async function login(page, email, password) {
   await page.getByLabel('Password').fill(password);
   await page.locator('form').getByRole('button', { name: 'Login' }).click();
   await expect(page.getByRole('heading', { name: "Bard's Journal" }).first()).toBeVisible();
-  await expect(page.getByText(email).first()).toBeVisible();
+  await expect(page.locator('.user-menu > summary')).toBeVisible();
 }
 
 async function logout(page) {
@@ -52,7 +52,7 @@ async function register(page, email, password) {
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByText(email).first()).toBeVisible();
+  await expect(page.locator('.user-menu > summary')).toBeVisible();
 }
 
 test.describe.serial('Multi-user campaign batch journaling', () => {
@@ -112,8 +112,7 @@ test.describe.serial('Multi-user campaign batch journaling', () => {
       await editor.click();
       await editor.fill(user.note);
       await page
-        .locator('section.card', { has: page.getByRole('heading', { name: 'New Entry' }) })
-        .locator('form')
+        .locator('.journal-chat-composer form')
         .evaluate((form) => form.requestSubmit());
 
       await expect(page.locator('.note', { hasText: user.note }).first()).toBeVisible();

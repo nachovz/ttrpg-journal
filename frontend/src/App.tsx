@@ -42,12 +42,12 @@ function AppShell() {
   }
 
   return (
-    <main className="container" aria-busy={isLoading ? 'true' : 'false'}>
+    <main className="container app-shell" aria-busy={isLoading ? 'true' : 'false'}>
       <AppHeader />
-
-      <AppRoutes />
-
-      {error ? <p className="error">{error}</p> : null}
+      <div className="app-content">
+        <AppRoutes />
+        {error ? <p className="error">{error}</p> : null}
+      </div>
     </main>
   );
 }

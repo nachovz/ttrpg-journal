@@ -162,9 +162,32 @@ export function JournalView({}: JournalViewProps) {
   }
 
   return (
-    <>
-      <section className="card">
-        <h2>New Entry</h2>
+    <section className="card journal-chat-card">
+      <div className="journal-chat-messages">
+        {me?.role === 'admin' ? (
+          <AdminJournalChat
+            campaignName={campaignDetails?.name || ''}
+            dayGroups={adminDayGroups}
+            dayLabelByKey={dayLabelByKey}
+            isLoading={isLoading}
+            selectedCampaignId={currentCampaignId}
+            onRenameDayGroup={handleRenameDayGroup}
+          />
+        ) : (
+          <UserJournalList
+            dayLabelByKey={dayLabelByKey}
+            groups={[
+              {
+                campaignId: currentCampaignId,
+                campaignName: campaignDetails?.name || 'Campaign',
+                notes: campaignNotes,
+              },
+            ]}
+          />
+        )}
+      </div>
+
+      <div className="journal-chat-composer">
         <form onSubmit={handleCreateNote} className="form">
           <label className="ios-switch">
             <input
@@ -184,30 +207,7 @@ export function JournalView({}: JournalViewProps) {
           <ReactQuill className="editor" theme="snow" value={editorHtml} onChange={setEditorHtml} placeholder={JOURNAL_PLACEHOLDER} />
           <button disabled={isLoading || !currentCampaignId} type="submit">Save note</button>
         </form>
-      </section>
-
-      <section className="card">
-        {me?.role === 'admin' ? (
-          <AdminJournalChat
-            campaignName={campaignDetails?.name || ''}
-            dayGroups={adminDayGroups}
-            dayLabelByKey={dayLabelByKey}
-            isLoading={isLoading}
-            selectedCampaignId={currentCampaignId}
-            onRenameDayGroup={handleRenameDayGroup}
-          />
-        ) : (
-          <UserJournalList
-            groups={[
-              {
-                campaignId: currentCampaignId,
-                campaignName: campaignDetails?.name || 'Campaign',
-                notes: campaignNotes,
-              },
-            ]}
-          />
-        )}
-      </section>
-    </>
+      </div>
+    </section>
   );
 }

@@ -26,6 +26,8 @@ export interface Campaign {
   updatedAt?: string;
   createdBy: string;
   memberIds: string[];
+  entryCount?: number;
+  memberCharacterNames?: string[];
 }
 
 export interface Note {

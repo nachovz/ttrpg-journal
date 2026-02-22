@@ -21,7 +21,6 @@ export function AdminJournalChat({
 }: AdminJournalChatProps) {
   return (
     <>
-      <h2>Campaign Journal Chat</h2>
       {campaignName ? <h3>{campaignName}</h3> : null}
       {dayGroups.length === 0 ? <p>No entries for the selected campaign.</p> : null}
 

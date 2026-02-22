@@ -65,22 +65,39 @@ export function CampaignsView({}: CampaignsViewProps) {
         {campaigns.length === 0 ? <p>No campaigns yet. Join one from a link or code.</p> : null}
         <div className="campaign-list">
           {campaigns.map((campaign) => (
-            <article className="campaign-item" key={campaign.id}>
-              <strong>{campaign.name}</strong>
+            <article className="campaign-item campaign-card" key={campaign.id}>
+              <strong className="campaign-title">{campaign.name}</strong>
               <span>Join code: {campaign.joinCode}</span>
               <a href={campaign.joinLink} target="_blank" rel="noreferrer">
                 {campaign.joinLink}
               </a>
+              <div className="campaign-stats">
+                <span className="hint">Entries: {campaign.entryCount || 0}</span>
+                <span className="hint">Members: {campaign.memberIds.length}</span>
+              </div>
+              <div className="campaign-members">
+                {(campaign.memberCharacterNames || []).length > 0 ? (
+                  (campaign.memberCharacterNames || []).map((memberName) => (
+                    <span className="campaign-member-chip" key={`${campaign.id}-${memberName}`}>
+                      {memberName}
+                    </span>
+                  ))
+                ) : (
+                  <span className="hint">No character names yet</span>
+                )}
+              </div>
               {me?.role === 'admin' ? <span className="hint">Created: {formatDateTime(campaign.createdAt)}</span> : null}
               <span className="hint">Last updated: {formatDateTime(campaign.updatedAt || campaign.createdAt)}</span>
-              <button disabled={isLoading} onClick={() => navigate(`/journal/${encodeURIComponent(campaign.id)}`)} type="button">
-                Load campaign journal
-              </button>
-              {me?.role === 'admin' ? (
-                <button className="button-danger" disabled={isLoading} onClick={() => deleteCampaign(campaign)} type="button">
-                  Delete campaign
+              <div className="campaign-actions">
+                <button disabled={isLoading} onClick={() => navigate(`/journal/${encodeURIComponent(campaign.id)}`)} type="button">
+                  Load campaign journal
                 </button>
-              ) : null}
+                {me?.role === 'admin' ? (
+                  <button className="button-danger" disabled={isLoading} onClick={() => deleteCampaign(campaign)} type="button">
+                    Delete campaign
+                  </button>
+                ) : null}
+              </div>
             </article>
           ))}
         </div>

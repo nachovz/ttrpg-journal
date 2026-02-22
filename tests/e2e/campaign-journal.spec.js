@@ -39,7 +39,7 @@ async function login(page, email, password) {
   await page.locator('form').getByRole('button', { name: 'Login' }).click();
   await expect(page.getByRole('heading', { name: "Bard's Journal" }).first()).toBeVisible();
   await expect(page.getByText('Failed to fetch')).not.toBeVisible();
-  await expect(page.getByText(email).first()).toBeVisible();
+  await expect(page.locator('.user-menu > summary')).toBeVisible();
 }
 
 async function logout(page) {
@@ -68,7 +68,6 @@ test.describe.serial('Campaign journaling flow', () => {
 
   test('admin creates campaign and obtains join code', async ({ page }) => {
     await login(page, adminEmail, adminPassword);
-    await expect(page.getByText('Role: admin')).toBeVisible();
 
     await page.getByRole('button', { name: 'Campaigns' }).click();
 
@@ -91,8 +90,7 @@ test.describe.serial('Campaign journaling flow', () => {
     await adminEditor.fill(adminPrivateNoteText);
     await expect(visibilitySwitch).toBeChecked();
     await page
-      .locator('section.card', { has: page.getByRole('heading', { name: 'New Entry' }) })
-      .locator('form')
+      .locator('.journal-chat-composer form')
       .evaluate((form) => form.requestSubmit());
     await expect(page.locator('.note', { hasText: adminPrivateNoteText }).first()).toBeVisible();
 
@@ -100,8 +98,7 @@ test.describe.serial('Campaign journaling flow', () => {
     await adminEditor.fill(adminPublicNoteText);
     await visibilitySwitch.uncheck();
     await page
-      .locator('section.card', { has: page.getByRole('heading', { name: 'New Entry' }) })
-      .locator('form')
+      .locator('.journal-chat-composer form')
       .evaluate((form) => form.requestSubmit());
     await expect(page.locator('.note', { hasText: adminPublicNoteText }).first()).toBeVisible();
 
@@ -115,7 +112,7 @@ test.describe.serial('Campaign journaling flow', () => {
     await page.getByLabel('Password').fill(userPassword);
     await page.getByRole('button', { name: 'Create account' }).click();
 
-    await expect(page.getByText(userEmail).first()).toBeVisible();
+    await expect(page.locator('.user-menu > summary')).toBeVisible();
 
     await page.getByRole('button', { name: 'Campaigns' }).click();
     await page.getByPlaceholder('Join code').fill(joinCode);
@@ -139,8 +136,7 @@ test.describe.serial('Campaign journaling flow', () => {
     await visibilitySwitch.check();
 
     await page
-      .locator('section.card', { has: page.getByRole('heading', { name: 'New Entry' }) })
-      .locator('form')
+      .locator('.journal-chat-composer form')
       .evaluate((form) => form.requestSubmit());
 
     await expect(page.getByRole('heading', { name: campaignName, level: 3 })).toBeVisible();
