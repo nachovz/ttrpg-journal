@@ -13,8 +13,7 @@ function hashString(value: string) {
 
 export function getNoteTintHue(note: Pick<Note, 'userId' | 'userRole'>) {
   if (note.userRole === 'admin') return DM_TINT_HUE;
-  if (!note.userId) return PLAYER_TINT_HUE[0];
+  if (!note.userId) return PLAYER_TINT_HUES[0];
   const hueIndex = hashString(note.userId) % PLAYER_TINT_HUES.length;
   return PLAYER_TINT_HUES[hueIndex];
 }
-

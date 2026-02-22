@@ -5,6 +5,7 @@ import { AdminJournalChat } from '../AdminJournalChat/AdminJournalChat';
 import { UserJournalList } from '../UserJournalList/UserJournalList';
 import { useSession } from '../../context/SessionContext/SessionContext';
 import { selectedCampaignStorage } from '../../services/selectedCampaignStorage';
+import { buildJournalDayExportMarkdown, downloadTextFile } from '../../utils/journalDayExport';
 import type { Campaign, Note } from '../../types/entities';
 import type { JournalViewProps } from './types';
 
@@ -140,6 +141,32 @@ export function JournalView({}: JournalViewProps) {
     }
   }
 
+  function handleExportDayGroup(day: string) {
+    if (me?.role !== 'admin' || !currentCampaignId) return;
+
+    const dayGroup = adminDayGroups.find((group) => group.day === day);
+    if (!dayGroup) {
+      setError('Unable to export: journal day group not found');
+      return;
+    }
+
+    const groupTitle = String(dayLabelByKey.get(`${currentCampaignId}:${day}`) || '').trim();
+    if (!groupTitle) {
+      setError('Name this day before exporting the group');
+      return;
+    }
+
+    const { filename, markdown } = buildJournalDayExportMarkdown({
+      campaignId: currentCampaignId,
+      campaignName: campaignDetails?.name || 'Campaign',
+      day,
+      groupTitle,
+      notes: dayGroup.notes,
+    });
+
+    downloadTextFile(filename, markdown);
+  }
+
   if (!currentCampaignId) {
     return (
       <section className="card">
@@ -182,6 +209,7 @@ export function JournalView({}: JournalViewProps) {
             dayLabelByKey={dayLabelByKey}
             isLoading={isLoading}
             selectedCampaignId={currentCampaignId}
+            onExportDayGroup={handleExportDayGroup}
             onRenameDayGroup={handleRenameDayGroup}
           />
         ) : (

@@ -12,5 +12,6 @@ export interface AdminJournalChatProps {
   dayLabelByKey: Map<string, string>;
   isLoading: boolean;
   selectedCampaignId: string;
+  onExportDayGroup: (day: string) => void;
   onRenameDayGroup: (day: string) => void;
 }

@@ -49,6 +49,7 @@ export function AdminJournalChat({
   dayLabelByKey,
   isLoading,
   selectedCampaignId,
+  onExportDayGroup,
   onRenameDayGroup,
 }: AdminJournalChatProps) {
   return (
@@ -57,50 +58,58 @@ export function AdminJournalChat({
       {dayGroups.length === 0 ? <p>No entries for the selected campaign.</p> : null}
 
       <div className="chat-day-list">
-        {dayGroups.map((dayGroup) => (
-          <section className="chat-day-group" key={dayGroup.day}>
-            <div className="chat-day-header">
-              <h4 className="chat-day-heading">
-                {dayLabelByKey.get(`${selectedCampaignId}:${dayGroup.day}`) || formatDayLabel(dayGroup.day)}
-              </h4>
-              <button disabled={isLoading} onClick={() => onRenameDayGroup(dayGroup.day)} type="button">
-                Name this day
-              </button>
-            </div>
+        {dayGroups.map((dayGroup) => {
+          const dayLabelKey = `${selectedCampaignId}:${dayGroup.day}`;
+          const customDayTitle = String(dayLabelByKey.get(dayLabelKey) || '').trim();
 
-            <div className="chat-thread">
-              {dayGroup.notes.map((note) => (
-                <article
-                  className={`note note-tinted chat-message ${note.userId === currentUserId ? 'is-own-note' : 'is-other-note'}`}
-                  key={note.id}
-                  style={{ '--note-tint-h': String(getNoteTintHue(note)) } as CSSProperties}
-                >
-                  <div className="meta chat-meta">
-                    {note.profileImageUrl ? (
-                      <img className="note-avatar" alt={`${getNoteDisplayName(note)} avatar`} src={note.profileImageUrl} />
-                    ) : (
-                      <div className="note-avatar note-avatar-fallback" aria-hidden="true">
-                        🧙
+          return (
+            <section className="chat-day-group" key={dayGroup.day}>
+              <div className="chat-day-header">
+                <h4 className="chat-day-heading">{customDayTitle || formatDayLabel(dayGroup.day)}</h4>
+                <div className="chat-day-actions">
+                  <button disabled={isLoading || !customDayTitle} onClick={() => onExportDayGroup(dayGroup.day)} type="button">
+                    Export group
+                  </button>
+                  <button disabled={isLoading} onClick={() => onRenameDayGroup(dayGroup.day)} type="button">
+                    Name this day
+                  </button>
+                </div>
+              </div>
+
+              <div className="chat-thread">
+                {dayGroup.notes.map((note) => (
+                  <article
+                    className={`note note-tinted chat-message ${note.userId === currentUserId ? 'is-own-note' : 'is-other-note'}`}
+                    key={note.id}
+                    style={{ '--note-tint-h': String(getNoteTintHue(note)) } as CSSProperties}
+                  >
+                    <div className="meta chat-meta">
+                      {note.profileImageUrl ? (
+                        <img className="note-avatar" alt={`${getNoteDisplayName(note)} avatar`} src={note.profileImageUrl} />
+                      ) : (
+                        <div className="note-avatar note-avatar-fallback" aria-hidden="true">
+                          🧙
+                        </div>
+                      )}
+                      <div className="chat-author">
+                        <strong>{getNoteDisplayName(note)}</strong>
+                        {getNoteCharacterLabel(note) ? <span>Character: {getNoteCharacterLabel(note)}</span> : null}
                       </div>
-                    )}
-                    <div className="chat-author">
-                      <strong>{getNoteDisplayName(note)}</strong>
-                      {getNoteCharacterLabel(note) ? <span>Character: {getNoteCharacterLabel(note)}</span> : null}
+                      <span className="note-meta-time">{formatEntryDateTime(note.updatedAt || note.createdAt)}</span>
+                      {note.userRole === 'admin' ? <span>{note.visibility === 'public' ? 'Public' : 'Private'}</span> : null}
+                      {note.dndBeyondUrl ? (
+                        <a href={note.dndBeyondUrl} target="_blank" rel="noreferrer">
+                          Character sheet
+                        </a>
+                      ) : null}
                     </div>
-                    <span className="note-meta-time">{formatEntryDateTime(note.updatedAt || note.createdAt)}</span>
-                    {note.userRole === 'admin' ? <span>{note.visibility === 'public' ? 'Public' : 'Private'}</span> : null}
-                    {note.dndBeyondUrl ? (
-                      <a href={note.dndBeyondUrl} target="_blank" rel="noreferrer">
-                        Character sheet
-                      </a>
-                    ) : null}
-                  </div>
-                  <div className="chat-bubble" dangerouslySetInnerHTML={{ __html: note.contentHtml }} />
-                </article>
-              ))}
-            </div>
-          </section>
-        ))}
+                    <div className="chat-bubble" dangerouslySetInnerHTML={{ __html: note.contentHtml }} />
+                  </article>
+                ))}
+              </div>
+            </section>
+          );
+        })}
       </div>
     </>
   );
