@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+import { getNoteTintHue } from '../../utils/noteTint';
 import type { AdminJournalChatProps } from './types';
 
 function formatDayLabel(value: string) {
@@ -41,6 +43,7 @@ function getNoteCharacterLabel(note: {
 
 export function AdminJournalChat({
   campaignName,
+  currentUserId,
   dayGroups,
   dayLabelByKey,
   isLoading,
@@ -66,7 +69,11 @@ export function AdminJournalChat({
 
             <div className="chat-thread">
               {dayGroup.notes.map((note) => (
-                <article className="note chat-message" key={note.id}>
+                <article
+                  className={`note note-tinted chat-message ${note.userId === currentUserId ? 'is-own-note' : 'is-other-note'}`}
+                  key={note.id}
+                  style={{ '--note-tint-h': String(getNoteTintHue(note)) } as CSSProperties}
+                >
                   <div className="meta chat-meta">
                     {note.profileImageUrl ? (
                       <img className="note-avatar" alt={`${getNoteDisplayName(note)} avatar`} src={note.profileImageUrl} />

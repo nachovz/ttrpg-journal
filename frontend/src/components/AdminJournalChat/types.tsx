@@ -7,6 +7,7 @@ export interface AdminDayGroup {
 
 export interface AdminJournalChatProps {
   campaignName: string;
+  currentUserId: string;
   dayGroups: AdminDayGroup[];
   dayLabelByKey: Map<string, string>;
   isLoading: boolean;

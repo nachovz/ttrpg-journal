@@ -249,6 +249,22 @@
     @apply grid gap-2;
   }
 
+  .chat-thread .note {
+    @apply w-full max-w-[92%];
+  }
+
+  .notes-grid .note {
+    @apply w-full max-w-[92%];
+  }
+
+  .note.is-own-note {
+    @apply ml-auto;
+  }
+
+  .note.is-other-note {
+    @apply mr-auto;
+  }
+
   .note-group h3 {
     @apply mb-1 text-base font-semibold text-red-800;
   }
@@ -263,6 +279,16 @@
 
   .dark .note {
     @apply border-amber-500/30 bg-zinc-900;
+  }
+
+  .note.note-tinted {
+    border-color: hsl(var(--note-tint-h, 18) 70% 38% / 0.28);
+    background-color: hsl(var(--note-tint-h, 18) 100% 98%);
+  }
+
+  .dark .note.note-tinted {
+    border-color: hsl(var(--note-tint-h, 18) 70% 55% / 0.28);
+    background-color: hsl(var(--note-tint-h, 18) 24% 12% / 0.92);
   }
 
   .note .meta {
@@ -315,6 +341,16 @@
 
   .dark .chat-bubble {
     @apply border-amber-400/30 bg-zinc-800;
+  }
+
+  .note.note-tinted .chat-bubble {
+    border-color: hsl(var(--note-tint-h, 18) 72% 45% / 0.2);
+    background-color: hsl(var(--note-tint-h, 18) 100% 99%);
+  }
+
+  .dark .note.note-tinted .chat-bubble {
+    border-color: hsl(var(--note-tint-h, 18) 72% 60% / 0.2);
+    background-color: hsl(var(--note-tint-h, 18) 20% 16% / 0.9);
   }
 
   .hint {

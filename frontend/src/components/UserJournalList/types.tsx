@@ -9,4 +9,5 @@ export interface UserCampaignGroup {
 export interface UserJournalListProps {
   groups: UserCampaignGroup[];
   dayLabelByKey: Map<string, string>;
+  currentUserId: string;
 }

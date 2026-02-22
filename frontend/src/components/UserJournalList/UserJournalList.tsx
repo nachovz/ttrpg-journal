@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+import { getNoteTintHue } from '../../utils/noteTint';
 import type { UserJournalListProps } from './types';
 
 function formatDayLabel(value: string) {
@@ -39,7 +41,7 @@ function getNoteCharacterLabel(note: {
   return note.characterName || '';
 }
 
-export function UserJournalList({ dayLabelByKey, groups }: UserJournalListProps) {
+export function UserJournalList({ currentUserId, dayLabelByKey, groups }: UserJournalListProps) {
   return (
     <>
       {groups.length === 0 ? <p>No entries yet.</p> : null}
@@ -67,7 +69,11 @@ export function UserJournalList({ dayLabelByKey, groups }: UserJournalListProps)
                     </div>
                     <div className="notes-grid">
                       {dayNotes.map((note) => (
-                        <article className="note" key={note.id}>
+                        <article
+                          className={`note note-tinted ${note.userId === currentUserId ? 'is-own-note' : 'is-other-note'}`}
+                          key={note.id}
+                          style={{ '--note-tint-h': String(getNoteTintHue(note)) } as CSSProperties}
+                        >
                           <div className="meta">
                             {note.profileImageUrl ? (
                               <img className="note-avatar" alt={`${getNoteDisplayName(note)} avatar`} src={note.profileImageUrl} />

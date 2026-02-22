@@ -177,6 +177,7 @@ export function JournalView({}: JournalViewProps) {
         {me?.role === 'admin' ? (
           <AdminJournalChat
             campaignName={campaignDetails?.name || ''}
+            currentUserId={me?.uid || ''}
             dayGroups={adminDayGroups}
             dayLabelByKey={dayLabelByKey}
             isLoading={isLoading}
@@ -185,6 +186,7 @@ export function JournalView({}: JournalViewProps) {
           />
         ) : (
           <UserJournalList
+            currentUserId={me?.uid || ''}
             dayLabelByKey={dayLabelByKey}
             groups={[
               {
