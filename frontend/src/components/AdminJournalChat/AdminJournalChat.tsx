@@ -26,11 +26,12 @@ function formatEntryDateTime(value: string) {
 
 function getNoteDisplayName(note: {
   userRole?: string;
+  characterName?: string;
   username?: string;
   userEmail?: string;
 }) {
   if (note.userRole === 'admin') return 'DM';
-  return note.username || note.userEmail || 'Unknown';
+  return note.characterName || note.username || note.userEmail || 'Unknown';
 }
 
 function getNoteCharacterLabel(note: {
