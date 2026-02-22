@@ -382,9 +382,10 @@
   }
 
   .journal-chat-card {
-    @apply grid gap-0 p-0;
-    height: calc(100vh - 8rem);
-    min-height: 560px;
+    @apply grid h-full min-h-0 gap-0 p-0;
+    height: calc(100vh - 4rem);
+    height: calc(100dvh - 4rem);
+    grid-template-rows: minmax(0, 1fr) auto;
   }
 
   .journal-chat-messages {
