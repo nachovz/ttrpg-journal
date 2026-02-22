@@ -1,6 +1,5 @@
 import { useCallback, type Dispatch, type FormEvent, type SetStateAction } from 'react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { auth } from '../../firebase';
+import { authClient, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from '../../authClient';
 import type { Campaign, NoteVisibility, ProfileFormState } from '../../types/entities';
 import { EMPTY_AUTH_FORM } from './defaults';
 import {
@@ -75,9 +74,9 @@ export function useSessionActions({
 
       try {
         if (authMode === 'register') {
-          await createUserWithEmailAndPassword(auth, authForm.email, authForm.password);
+          await createUserWithEmailAndPassword(authClient, authForm.email, authForm.password);
         } else {
-          await signInWithEmailAndPassword(auth, authForm.email, authForm.password);
+          await signInWithEmailAndPassword(authClient, authForm.email, authForm.password);
         }
         setAuthForm(EMPTY_AUTH_FORM);
       } catch (requestError) {
@@ -190,7 +189,7 @@ export function useSessionActions({
   );
 
   const logout = useCallback(async () => {
-    await signOut(auth);
+    await signOut(authClient);
   }, []);
 
   return {

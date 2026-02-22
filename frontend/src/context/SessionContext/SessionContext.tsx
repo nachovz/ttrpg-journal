@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { User } from 'firebase/auth';
+import type { AuthUser } from '../../authClient';
 import type {
   AuthFormState,
   Campaign,
@@ -31,7 +31,7 @@ interface SessionProviderProps {
 export function SessionProvider({ children }: SessionProviderProps) {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authForm, setAuthForm] = useState<AuthFormState>(EMPTY_AUTH_FORM);
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<AuthUser | null>(null);
   const [isAuthInitializing, setIsAuthInitializing] = useState(true);
   const [me, setMe] = useState<SessionUser | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);

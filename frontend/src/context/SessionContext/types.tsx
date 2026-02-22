@@ -1,5 +1,5 @@
-import type { User } from 'firebase/auth';
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
+import type { AuthUser } from '../../authClient';
 import type {
   AuthFormState,
   Campaign,
@@ -13,7 +13,7 @@ import type {
 export interface SessionContextValue {
   authMode: 'login' | 'register';
   authForm: AuthFormState;
-  firebaseUser: User | null;
+  firebaseUser: AuthUser | null;
   isAuthInitializing: boolean;
   me: SessionUser | null;
   notes: Note[];

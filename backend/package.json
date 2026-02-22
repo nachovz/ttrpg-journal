@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.js",
+    "dev:mock": "FIREBASE_USE_LOCAL=true tsx watch src/server.js",
+    "dev:local": "FIREBASE_USE_EMULATORS=true FIREBASE_PROJECT_ID=demo-bards-journal tsx watch src/server.js",
     "build": "tsc --allowJs --checkJs --noEmit false --outDir dist src/server.js",
     "start": "node dist/server.js"
   },

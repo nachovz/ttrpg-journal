@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth } from '../../firebase';
+import { authClient, onAuthStateChanged, type AuthUser } from '../../authClient';
 import { clearJoinCodeInUrl } from './defaults';
 
 export function useThemeInitialization(setTheme: (theme: 'light' | 'dark') => void) {
@@ -15,7 +14,7 @@ export function useThemeInitialization(setTheme: (theme: 'light' | 'dark') => vo
 }
 
 interface AuthLifecycleConfig {
-  setFirebaseUser: (user: User | null) => void;
+  setFirebaseUser: (user: AuthUser | null) => void;
   setIsAuthInitializing: (value: boolean) => void;
   setError: (message: string) => void;
 }
@@ -31,7 +30,7 @@ export function useAuthLifecycle({ setFirebaseUser, setIsAuthInitializing, setEr
     }, 5000);
 
     const unsubscribe = onAuthStateChanged(
-      auth,
+      authClient,
       (user) => {
         if (!isMounted) return;
         window.clearTimeout(timeoutId);
@@ -57,7 +56,7 @@ export function useAuthLifecycle({ setFirebaseUser, setIsAuthInitializing, setEr
 interface AutoJoinConfig {
   autoJoinAttempted: boolean;
   autoJoinCode: string;
-  firebaseUser: User | null;
+  firebaseUser: AuthUser | null;
   setAutoJoinAttempted: (value: boolean) => void;
   joinByCode: (joinCode: string, silentMode: boolean) => Promise<void>;
 }

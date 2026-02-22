@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import dotenv from 'dotenv';
-import { auth, db } from './firebase.js';
+import { auth, db, isUsingLocalFirebase, localAuthApi } from './firebase.js';
 
 dotenv.config();
 
@@ -18,6 +18,30 @@ app.register(cors, {
 });
 
 app.get('/health', async () => ({ ok: true }));
+
+if (isUsingLocalFirebase && localAuthApi) {
+  app.post('/api/local-auth/register', async (request, reply) => {
+    try {
+      const email = String(request.body?.email || '').trim();
+      const password = String(request.body?.password || '');
+      const result = await localAuthApi.register({ email, password });
+      return result;
+    } catch (error) {
+      return reply.code(400).send({ error: error instanceof Error ? error.message : 'Unable to register' });
+    }
+  });
+
+  app.post('/api/local-auth/login', async (request, reply) => {
+    try {
+      const email = String(request.body?.email || '').trim();
+      const password = String(request.body?.password || '');
+      const result = await localAuthApi.login({ email, password });
+      return result;
+    } catch (error) {
+      return reply.code(401).send({ error: error instanceof Error ? error.message : 'Unable to login' });
+    }
+  });
+}
 
 function normalizeProfileInput(body = {}) {
   const username = String(body.username || '').trim();
@@ -181,6 +205,73 @@ function campaignToResponse(campaign) {
   };
 }
 
+function isNoteVisibleToUser(note, requestUser) {
+  if (requestUser.role === 'admin') return true;
+  if (note.userId === requestUser.uid) return true;
+  return resolveNoteVisibility(note) === 'public';
+}
+
+async function getUsersByIds(userIds) {
+  const uniqueIds = [...new Set((userIds || []).map((value) => String(value || '').trim()).filter(Boolean))];
+  if (uniqueIds.length === 0) return new Map();
+
+  const docs = await Promise.all(uniqueIds.map((userId) => db.collection('users').doc(userId).get()));
+  const usersById = new Map();
+  for (const doc of docs) {
+    if (!doc.exists) continue;
+    usersById.set(doc.id, doc.data() || {});
+  }
+  return usersById;
+}
+
+function getCampaignMemberCharacterNames(campaign, usersById) {
+  const memberIds = Array.isArray(campaign.memberIds) ? campaign.memberIds : [];
+  const names = new Set();
+
+  for (const memberId of memberIds) {
+    const userData = usersById.get(memberId);
+    const characterName = String(userData?.characterName || '').trim();
+    if (characterName) {
+      names.add(characterName);
+    }
+  }
+
+  return [...names].sort((a, b) => a.localeCompare(b));
+}
+
+async function enrichCampaignResponses(campaigns, requestUser) {
+  if (!Array.isArray(campaigns) || campaigns.length === 0) {
+    return [];
+  }
+
+  try {
+    const allMemberIds = campaigns.flatMap((campaign) => (Array.isArray(campaign.memberIds) ? campaign.memberIds : []));
+    const usersById = await getUsersByIds(allMemberIds);
+
+    const noteSnapshots = await Promise.all(
+      campaigns.map((campaign) => db.collection('notes').where('campaignId', '==', campaign.id).get())
+    );
+
+    return campaigns.map((campaign, index) => {
+      const notes = noteSnapshots[index].docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const entryCount = notes.filter((note) => isNoteVisibleToUser(note, requestUser)).length;
+
+      return {
+        ...campaignToResponse(campaign),
+        entryCount,
+        memberCharacterNames: getCampaignMemberCharacterNames(campaign, usersById),
+      };
+    });
+  } catch (error) {
+    app.log.error({ error }, 'Failed to enrich campaign responses');
+    return campaigns.map((campaign) => ({
+      ...campaignToResponse(campaign),
+      entryCount: 0,
+      memberCharacterNames: [],
+    }));
+  }
+}
+
 async function ensureRoleFromEmail(user) {
   const role = isAdminEmail(user.email) ? 'admin' : 'user';
   if (user.customClaims?.role !== role) {
@@ -269,9 +360,9 @@ app.put('/api/profile', { preHandler: verifyAuthToken }, async (request, reply) 
 
 app.get('/api/campaigns', { preHandler: verifyAuthToken }, async (request) => {
   const snapshot = await db.collection('campaigns').where('memberIds', 'array-contains', request.user.uid).get();
-  return snapshot.docs
-    .map((doc) => campaignToResponse({ id: doc.id, ...doc.data() }))
-    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  const campaigns = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  const enrichedCampaigns = await enrichCampaignResponses(campaigns, request.user);
+  return enrichedCampaigns.sort((a, b) => String(a.name).localeCompare(String(b.name)));
 });
 
 app.get('/api/campaigns/:id', { preHandler: verifyAuthToken }, async (request, reply) => {
@@ -289,7 +380,8 @@ app.get('/api/campaigns/:id', { preHandler: verifyAuthToken }, async (request, r
     return reply.code(403).send({ error: 'You are not a member of this campaign' });
   }
 
-  return campaignToResponse(campaign);
+  const [enrichedCampaign] = await enrichCampaignResponses([campaign], request.user);
+  return enrichedCampaign;
 });
 
 app.post('/api/campaigns', { preHandler: verifyAuthToken }, async (request, reply) => {
@@ -317,7 +409,8 @@ app.post('/api/campaigns', { preHandler: verifyAuthToken }, async (request, repl
   };
 
   const ref = await db.collection('campaigns').add(campaign);
-  return campaignToResponse({ id: ref.id, ...campaign });
+  const [enrichedCampaign] = await enrichCampaignResponses([{ id: ref.id, ...campaign }], request.user);
+  return enrichedCampaign;
 });
 
 app.post('/api/campaigns/join', { preHandler: verifyAuthToken }, async (request, reply) => {
@@ -345,7 +438,8 @@ app.post('/api/campaigns/join', { preHandler: verifyAuthToken }, async (request,
   });
 
   const updatedCampaign = await getCampaignById(campaign.id);
-  return campaignToResponse(updatedCampaign);
+  const [enrichedCampaign] = await enrichCampaignResponses([updatedCampaign], request.user);
+  return enrichedCampaign;
 });
 
 app.delete('/api/campaigns/:id', { preHandler: verifyAuthToken }, async (request, reply) => {
