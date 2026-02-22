@@ -67,6 +67,14 @@
     @apply border-amber-500/25 bg-zinc-900/95 shadow-none;
   }
 
+  .card > h2 {
+    @apply m-0 mb-2 text-lg font-semibold text-red-800;
+  }
+
+  .dark .card > h2 {
+    @apply text-amber-300;
+  }
+
   .header-card {
     @apply flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between;
   }
@@ -465,8 +473,7 @@
   }
 
   .campaign-card {
-    @apply content-start;
-    grid-template-rows: auto auto auto auto auto auto 1fr auto;
+    @apply flex h-full flex-col gap-1;
   }
 
   .campaign-title {
@@ -494,7 +501,7 @@
   }
 
   .campaign-actions {
-    @apply mt-2 grid gap-2;
+    @apply mt-auto grid gap-2 pt-2;
   }
 
   .theme-toggle {
