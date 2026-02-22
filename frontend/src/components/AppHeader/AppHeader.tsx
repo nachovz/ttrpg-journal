@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSession } from '../../context/SessionContext/SessionContext';
+import { selectedCampaignStorage } from '../../services/selectedCampaignStorage';
 import type { AppHeaderProps } from './types';
 
 export function AppHeader({}: AppHeaderProps) {
@@ -9,6 +10,15 @@ export function AppHeader({}: AppHeaderProps) {
   const activeView = location.pathname === '/campaigns' ? 'campaigns' : location.pathname === '/profile' ? 'profile' : 'journal';
   const userDisplayName = me?.characterName || me?.username || 'Adventurer';
 
+  function handleOpenJournal() {
+    const storedCampaignId = selectedCampaignStorage.getSelectedCampaignId();
+    if (storedCampaignId) {
+      navigate(`/journal/${encodeURIComponent(storedCampaignId)}`);
+      return;
+    }
+    navigate('/journal');
+  }
+
   return (
     <header className="top-nav">
       <div className="top-nav-brand">
@@ -16,7 +26,7 @@ export function AppHeader({}: AppHeaderProps) {
       </div>
 
       <nav className="tabs top-nav-tabs" aria-label="Main navigation">
-        <button className={activeView === 'journal' ? 'active' : ''} onClick={() => navigate('/journal')} type="button">
+        <button className={activeView === 'journal' ? 'active' : ''} onClick={handleOpenJournal} type="button">
           Journal
         </button>
         <button className={activeView === 'campaigns' ? 'active' : ''} onClick={() => navigate('/campaigns')} type="button">

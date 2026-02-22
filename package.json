@@ -12,6 +12,8 @@
     "dev:local": "concurrently \"npm run emulators:start\" \"npm run dev:local -w backend\" \"npm run dev:local -w frontend\"",
     "emulators:start": "firebase emulators:start --only auth,firestore --project demo-bards-journal",
     "build": "npm run build -w backend && npm run build -w frontend",
+    "test:typecheck": "npm run typecheck -w backend && npm run typecheck -w frontend && npm run typecheck:test -w frontend",
+    "test:unit": "npm run test:typecheck && jest --config jest.config.cjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:a11y": "playwright test tests/e2e/accessibility.spec.js"
@@ -19,6 +21,10 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.11.1",
     "@playwright/test": "^1.58.2",
-    "concurrently": "^9.1.2"
+    "@types/jest": "^30.0.0",
+    "concurrently": "^9.1.2",
+    "jest": "^30.0.5",
+    "jest-environment-jsdom": "^30.0.5",
+    "ts-jest": "^29.4.1"
   }
 }

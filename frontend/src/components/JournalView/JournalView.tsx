@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import ReactQuill from 'react-quill';
 import { useMatch, useNavigate } from 'react-router-dom';
 import { AdminJournalChat } from '../AdminJournalChat/AdminJournalChat';
 import { UserJournalList } from '../UserJournalList/UserJournalList';
 import { useSession } from '../../context/SessionContext/SessionContext';
+import { selectedCampaignStorage } from '../../services/selectedCampaignStorage';
 import type { Campaign, Note } from '../../types/entities';
 import type { JournalViewProps } from './types';
 
@@ -41,6 +42,11 @@ export function JournalView({}: JournalViewProps) {
 
   useEffect(() => {
     if (!currentCampaignId) {
+      const storedCampaignId = selectedCampaignStorage.getSelectedCampaignId();
+      if (storedCampaignId) {
+        navigate(`/journal/${encodeURIComponent(storedCampaignId)}`, { replace: true });
+        return;
+      }
       setCampaignDetails(null);
       setIsCampaignInvalid(false);
       setIsCampaignLoading(false);
@@ -54,10 +60,14 @@ export function JournalView({}: JournalViewProps) {
     fetchCampaignById(currentCampaignId)
       .then((campaign) => {
         if (cancelled) return;
+        selectedCampaignStorage.setSelectedCampaignId(currentCampaignId);
         setCampaignDetails(campaign);
       })
       .catch(() => {
         if (cancelled) return;
+        if (selectedCampaignStorage.getSelectedCampaignId() === currentCampaignId) {
+          selectedCampaignStorage.clearSelectedCampaignId();
+        }
         setCampaignDetails(null);
         setIsCampaignInvalid(true);
       })
@@ -69,7 +79,7 @@ export function JournalView({}: JournalViewProps) {
     return () => {
       cancelled = true;
     };
-  }, [currentCampaignId, fetchCampaignById]);
+  }, [currentCampaignId, fetchCampaignById, navigate]);
 
   const campaignNotes = useMemo(() => {
     if (!currentCampaignId) return [];
@@ -99,7 +109,7 @@ export function JournalView({}: JournalViewProps) {
     return map;
   }, [journalDayLabels]);
 
-  async function handleCreateNote(event: React.FormEvent) {
+  async function handleCreateNote(event: FormEvent) {
     event.preventDefault();
 
     try {

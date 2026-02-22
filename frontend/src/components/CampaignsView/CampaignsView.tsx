@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '../../context/SessionContext/SessionContext';
+import { selectedCampaignStorage } from '../../services/selectedCampaignStorage';
 import type { CampaignsViewProps } from './types';
 
 function formatDateTime(value?: string) {
@@ -23,6 +24,11 @@ export function CampaignsView({}: CampaignsViewProps) {
     setCampaignNameInput,
     setJoinCodeInput,
   } = useSession();
+
+  function handleOpenCampaignJournal(campaignId: string) {
+    selectedCampaignStorage.setSelectedCampaignId(campaignId);
+    navigate(`/journal/${encodeURIComponent(campaignId)}`);
+  }
 
   return (
     <>
@@ -89,7 +95,7 @@ export function CampaignsView({}: CampaignsViewProps) {
               {me?.role === 'admin' ? <span className="hint">Created: {formatDateTime(campaign.createdAt)}</span> : null}
               <span className="hint">Last updated: {formatDateTime(campaign.updatedAt || campaign.createdAt)}</span>
               <div className="campaign-actions">
-                <button disabled={isLoading} onClick={() => navigate(`/journal/${encodeURIComponent(campaign.id)}`)} type="button">
+                <button disabled={isLoading} onClick={() => handleOpenCampaignJournal(campaign.id)} type="button">
                   Load campaign journal
                 </button>
                 {me?.role === 'admin' ? (

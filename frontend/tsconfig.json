@@ -9,6 +9,7 @@
     "jsx": "react-jsx",
     "strict": false,
     "noEmit": true,
+    "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "types": ["vite/client"]

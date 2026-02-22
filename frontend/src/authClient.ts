@@ -14,6 +14,7 @@ const LOCAL_TOKEN_KEY = 'bards_journal_local_token';
 const LOCAL_USER_KEY = 'bards_journal_local_user';
 
 export type AuthUser = Pick<FirebaseUser, 'uid' | 'email' | 'getIdToken'>;
+type AuthStateListener = (user: AuthUser | null) => void;
 
 interface LocalStoredUser {
   uid: string;
@@ -37,8 +38,8 @@ class LocalAuthUserImpl {
 }
 
 const localState = {
-  currentUser: null,
-  listeners: new Set(),
+  currentUser: null as AuthUser | null,
+  listeners: new Set<AuthStateListener>(),
 };
 
 function loadLocalUserFromStorage() {
@@ -118,7 +119,7 @@ export async function signOut(_auth) {
   notifyLocalAuthListeners();
 }
 
-export function onAuthStateChanged(_auth, next, errorCallback) {
+export function onAuthStateChanged(_auth, next: AuthStateListener, errorCallback?: (error: unknown) => void) {
   if (!useLocalAuth) {
     return firebaseOnAuthStateChanged(firebaseAuth, next, errorCallback);
   }
@@ -141,4 +142,3 @@ export function onAuthStateChanged(_auth, next, errorCallback) {
 export function isUsingLocalAuth() {
   return useLocalAuth;
 }
-
