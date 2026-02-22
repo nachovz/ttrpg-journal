@@ -48,7 +48,7 @@
 
 @layer components {
   .container {
-    @apply mx-auto grid max-w-6xl gap-3 p-4 md:p-6;
+    @apply mx-auto grid max-w-6xl gap-2 p-3 md:p-4;
   }
 
   .app-shell {
@@ -56,15 +56,15 @@
   }
 
   .app-content {
-    @apply grid gap-3 px-3 pb-0 md:px-4 md:pb-0;
+    @apply grid gap-2 px-2 pb-0 md:px-3 md:pb-0;
   }
 
   .card {
-    @apply rounded-xl border border-amber-900/20 bg-white/95 p-4 shadow-lg;
+    @apply rounded-lg border border-amber-900/25 bg-white/95 p-3 shadow-md;
   }
 
   .dark .card {
-    @apply border-amber-500/25 bg-zinc-900/95 shadow-none;
+    @apply border-amber-500/30 bg-zinc-900/95 shadow-none;
   }
 
   .card > h2 {
@@ -80,11 +80,13 @@
   }
 
   .top-nav {
-    @apply sticky top-0 z-30 flex h-14 flex-nowrap items-center justify-between gap-2 border-b border-amber-900/25 bg-amber-50/90 px-3 py-2 backdrop-blur md:px-4;
+    @apply sticky top-0 z-30 flex h-14 flex-nowrap items-center justify-between gap-2 border-b border-amber-900/30 bg-amber-50/90 px-2 py-2 backdrop-blur md:px-3;
+    box-shadow: inset 0 -1px 0 rgba(120, 53, 15, 0.18);
   }
 
   .dark .top-nav {
     @apply border-amber-500/25 bg-zinc-950/90;
+    box-shadow: inset 0 -1px 0 rgba(251, 191, 36, 0.1);
   }
 
   .top-nav-brand h1 {
@@ -389,7 +391,7 @@
   }
 
   .journal-chat-messages {
-    @apply overflow-y-auto px-3 pt-0.5 pb-1.5;
+    @apply overflow-y-auto px-2 pt-0.5 pb-1;
     min-height: 0;
   }
 
@@ -426,7 +428,7 @@
   }
 
   .journal-chat-composer {
-    @apply border-t border-amber-900/20 bg-white/95 px-3 py-2;
+    @apply border-t border-amber-900/25 bg-white/95 px-2 py-1.5;
   }
 
   .dark .journal-chat-composer {
@@ -493,12 +495,24 @@
     @apply leading-none;
   }
 
+  .campaign-toolbar {
+    @apply grid gap-2 lg:grid-cols-2;
+  }
+
+  .campaign-toolbar-form {
+    @apply items-end rounded-md border border-amber-900/20 bg-amber-50/70 p-2;
+  }
+
+  .dark .campaign-toolbar-form {
+    @apply border-amber-500/20 bg-zinc-950/60;
+  }
+
   .campaign-list {
-    @apply grid gap-3 md:grid-cols-2 xl:grid-cols-3;
+    @apply grid gap-2 md:grid-cols-2 xl:grid-cols-3;
   }
 
   .campaign-item {
-    @apply grid gap-1 rounded-md border border-amber-900/25 bg-white p-3;
+    @apply grid gap-1 rounded-md border border-amber-900/25 bg-white p-2.5;
   }
 
   .dark .campaign-item {

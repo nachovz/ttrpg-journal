@@ -33,38 +33,37 @@ export function CampaignsView({}: CampaignsViewProps) {
   return (
     <>
       <section className="card">
-        <h2>Join Campaign</h2>
-        <form onSubmit={joinCampaign} className="form inline-form">
-          <input
-            type="text"
-            value={joinCodeInput}
-            onChange={(event) => setJoinCodeInput(event.target.value.toUpperCase())}
-            placeholder="Join code"
-          />
-          <button disabled={isLoading} type="submit">
-            Join
-          </button>
-        </form>
-      </section>
-
-      {me?.role === 'admin' ? (
-        <section className="card">
-          <h2>Create Campaign</h2>
-          <form onSubmit={createCampaign} className="form inline-form">
+        <h2>Campaign Tools</h2>
+        <div className="campaign-toolbar">
+          <form onSubmit={joinCampaign} className="form inline-form campaign-toolbar-form">
             <input
               type="text"
-              value={campaignNameInput}
-              onChange={(event) => setCampaignNameInput(event.target.value)}
-              placeholder="Campaign name"
-              maxLength={80}
-              required
+              value={joinCodeInput}
+              onChange={(event) => setJoinCodeInput(event.target.value.toUpperCase())}
+              placeholder="Join code"
             />
             <button disabled={isLoading} type="submit">
-              Create
+              Join
             </button>
           </form>
-        </section>
-      ) : null}
+
+          {me?.role === 'admin' ? (
+            <form onSubmit={createCampaign} className="form inline-form campaign-toolbar-form">
+              <input
+                type="text"
+                value={campaignNameInput}
+                onChange={(event) => setCampaignNameInput(event.target.value)}
+                placeholder="Campaign name"
+                maxLength={80}
+                required
+              />
+              <button disabled={isLoading} type="submit">
+                Create
+              </button>
+            </form>
+          ) : null}
+        </div>
+      </section>
 
       <section className="card">
         <h2>My Campaigns</h2>
