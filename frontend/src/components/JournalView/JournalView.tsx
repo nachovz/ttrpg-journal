@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import ReactQuill from 'react-quill';
+import ReactQuill from 'react-quill-new';
 import { useMatch, useNavigate } from 'react-router-dom';
 import { AdminJournalChat } from '../AdminJournalChat/AdminJournalChat';
 import { UserJournalList } from '../UserJournalList/UserJournalList';

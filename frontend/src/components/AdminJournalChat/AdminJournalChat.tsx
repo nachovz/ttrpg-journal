@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { getNoteTintHue } from '../../utils/noteTint';
+import { sanitizeNoteHtml } from '../../utils/sanitizeHtml';
 import type { AdminJournalChatProps } from './types';
 
 function formatDayLabel(value: string) {
@@ -103,7 +104,7 @@ export function AdminJournalChat({
                         </a>
                       ) : null}
                     </div>
-                    <div className="chat-bubble" dangerouslySetInnerHTML={{ __html: note.contentHtml }} />
+                    <div className="chat-bubble" dangerouslySetInnerHTML={{ __html: sanitizeNoteHtml(note.contentHtml) }} />
                   </article>
                 ))}
               </div>

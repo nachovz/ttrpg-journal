@@ -22,17 +22,17 @@ interface LocalStoredUser {
 }
 
 class LocalAuthUserImpl {
-  uid;
-  email;
-  #token;
+  uid: string;
+  email: string;
+  #token: string;
 
-  constructor(user, token) {
+  constructor(user: LocalStoredUser, token: string) {
     this.uid = user.uid;
     this.email = user.email;
     this.#token = token;
   }
 
-  async getIdToken() {
+  async getIdToken(): Promise<string> {
     return this.#token;
   }
 }
@@ -55,7 +55,7 @@ function loadLocalUserFromStorage() {
   }
 }
 
-function saveLocalAuth(user, token) {
+function saveLocalAuth(user: LocalStoredUser, token: string) {
   localStorage.setItem(LOCAL_TOKEN_KEY, token);
   localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(user));
   localState.currentUser = new LocalAuthUserImpl(user, token);
@@ -73,45 +73,45 @@ function notifyLocalAuthListeners() {
   }
 }
 
-async function postLocalAuth(path, email, password) {
+async function postLocalAuth(path: string, email: string, password: string): Promise<Record<string, unknown>> {
   const response = await fetch(`${API_URL}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
 
-  const data = await response.json().catch(() => ({}));
+  const data = await response.json().catch(() => ({})) as Record<string, unknown>;
   if (!response.ok) {
-    throw new Error(data.error || 'Authentication failed');
+    throw new Error(String(data['error'] || 'Authentication failed'));
   }
   return data;
 }
 
 export const authClient = useLocalAuth ? ({ mode: 'local' } as const) : firebaseAuth;
 
-export async function createUserWithEmailAndPassword(_auth, email, password) {
+export async function createUserWithEmailAndPassword(_auth: unknown, email: string, password: string) {
   if (!useLocalAuth) {
     return firebaseCreateUserWithEmailAndPassword(firebaseAuth, email, password);
   }
 
   const data = await postLocalAuth('/api/local-auth/register', email, password);
-  saveLocalAuth(data.user, data.token);
+  saveLocalAuth(data['user'] as LocalStoredUser, String(data['token']));
   notifyLocalAuthListeners();
   return { user: localState.currentUser };
 }
 
-export async function signInWithEmailAndPassword(_auth, email, password) {
+export async function signInWithEmailAndPassword(_auth: unknown, email: string, password: string) {
   if (!useLocalAuth) {
     return firebaseSignInWithEmailAndPassword(firebaseAuth, email, password);
   }
 
   const data = await postLocalAuth('/api/local-auth/login', email, password);
-  saveLocalAuth(data.user, data.token);
+  saveLocalAuth(data['user'] as LocalStoredUser, String(data['token']));
   notifyLocalAuthListeners();
   return { user: localState.currentUser };
 }
 
-export async function signOut(_auth) {
+export async function signOut(_auth: unknown) {
   if (!useLocalAuth) {
     return firebaseSignOut(firebaseAuth);
   }
@@ -119,7 +119,7 @@ export async function signOut(_auth) {
   notifyLocalAuthListeners();
 }
 
-export function onAuthStateChanged(_auth, next: AuthStateListener, errorCallback?: (error: unknown) => void) {
+export function onAuthStateChanged(_auth: unknown, next: AuthStateListener, errorCallback?: (error: unknown) => void) {
   if (!useLocalAuth) {
     return firebaseOnAuthStateChanged(firebaseAuth, next, errorCallback);
   }
