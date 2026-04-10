@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { getNoteTintHue } from '../../utils/noteTint';
+import { sanitizeNoteHtml } from '../../utils/sanitizeHtml';
 import type { UserJournalListProps } from './types';
 
 function formatDayLabel(value: string) {
@@ -90,7 +91,7 @@ export function UserJournalList({ currentUserId, dayLabelByKey, groups }: UserJo
                               {formatEntryDateTime(note.updatedAt || note.createdAt)}
                             </span>
                           </div>
-                          <div dangerouslySetInnerHTML={{ __html: note.contentHtml }} />
+                          <div dangerouslySetInnerHTML={{ __html: sanitizeNoteHtml(note.contentHtml) }} />
                         </article>
                       ))}
                     </div>
