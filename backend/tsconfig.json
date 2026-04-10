@@ -4,10 +4,9 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "dist",
-    "strict": false,
+    "strict": true,
     "skipLibCheck": true,
-    "allowJs": true,
-    "checkJs": false
+    "allowJs": false
   },
   "include": ["src"]
 }

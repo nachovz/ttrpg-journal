@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, type DependencyList } from 'react';
 
-export function useQuillA11y(deps: unknown[] = []) {
+export function useQuillA11y(deps: DependencyList = []) {
   useEffect(() => {
     function applyQuillA11yLabels() {
       const buttonLabels: Record<string, string> = {
